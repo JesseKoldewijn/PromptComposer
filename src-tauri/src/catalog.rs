@@ -184,12 +184,29 @@ fn cell_string(cell: &Data) -> String {
     }
 }
 
+/// Canonical subject sheet, then pre-rebrand name for existing archives.
+const SUBJECT_SHEET_CANDIDATES: &[&str] = &["Subjects", "Maidens"];
+
 fn load_subjects(
     workbook: &mut Xlsx<std::io::BufReader<std::fs::File>>,
 ) -> Result<HashMap<u32, Subject>, ComposeError> {
-    let range = workbook
-        .worksheet_range("Subjects")
-        .map_err(|e| ComposeError::Catalog(format!("Subjects sheet: {e}")))?;
+    let mut last_err = None;
+    let mut range = None;
+    for name in SUBJECT_SHEET_CANDIDATES {
+        match workbook.worksheet_range(name) {
+            Ok(r) => {
+                range = Some(r);
+                break;
+            }
+            Err(e) => last_err = Some(e),
+        }
+    }
+    let range = range.ok_or_else(|| {
+        let detail = last_err
+            .map(|e| e.to_string())
+            .unwrap_or_else(|| "not found".into());
+        ComposeError::Catalog(format!("Subjects sheet: {detail}"))
+    })?;
 
     let mut subjects = HashMap::new();
     for (idx, row) in range.rows().enumerate() {
@@ -303,5 +320,48 @@ mod tests {
             ACTION_PROMPT
         );
         let _ = fixtures_data::POSE_PROMPT;
+    }
+
+    #[test]
+    fn loads_legacy_subject_sheet_name() {
+        use rust_xlsxwriter::Workbook;
+        use tempfile::tempdir;
+
+        let dir = tempdir().unwrap();
+        let path = dir.path().join("legacy.xlsx");
+        let mut workbook = Workbook::new();
+
+        {
+            // Pre-rebrand archives still use this sheet title.
+            let sheet = workbook
+                .add_worksheet()
+                .set_name(SUBJECT_SHEET_CANDIDATES[1])
+                .unwrap();
+            sheet.write_string(0, 0, "Name").unwrap();
+            sheet.write_string(0, 1, "Body").unwrap();
+            sheet.write_string(1, 0, "Legacy").unwrap();
+            sheet.write_string(1, 1, "BODY_LEGACY").unwrap();
+        }
+        for (sheet_name, entry_name, level, prompt) in [
+            ("Outfits", "Outfit L1-01", 1u8, "O"),
+            ("Poses", "Pose L2-01", 2u8, "P"),
+            ("Actions", "Action L1-02", 1u8, "A"),
+            ("Scenes", "Scene L3-01", 3u8, "S"),
+        ] {
+            let sheet = workbook.add_worksheet().set_name(sheet_name).unwrap();
+            sheet.write_string(0, 0, "Name").unwrap();
+            sheet.write_string(0, 1, "Level").unwrap();
+            sheet.write_string(0, 2, "Status").unwrap();
+            sheet.write_string(0, 3, "Prompt").unwrap();
+            sheet.write_string(1, 0, entry_name).unwrap();
+            sheet.write_number(1, 1, f64::from(level)).unwrap();
+            sheet.write_string(1, 2, "USE").unwrap();
+            sheet.write_string(1, 3, prompt).unwrap();
+        }
+        workbook.save(&path).unwrap();
+
+        let catalog = Catalog::load(&path).unwrap();
+        assert_eq!(catalog.counts().subjects, 1);
+        assert_eq!(catalog.subject(2).unwrap().body, "BODY_LEGACY");
     }
 }
