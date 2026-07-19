@@ -5,6 +5,7 @@ use calamine::{Data, Reader, Xlsx};
 use serde::Serialize;
 use tauri::{AppHandle, Manager};
 
+use crate::archive_schema::SUBJECT_SHEET_CANDIDATES;
 use crate::error::ComposeError;
 
 pub const MAX_OPERATIONAL_LEVEL: u8 = 5;
@@ -184,9 +185,6 @@ fn cell_string(cell: &Data) -> String {
     }
 }
 
-/// Canonical subject sheet, then pre-rebrand name for existing archives.
-const SUBJECT_SHEET_CANDIDATES: &[&str] = &["Subjects", "Maidens"];
-
 fn load_subjects(
     workbook: &mut Xlsx<std::io::BufReader<std::fs::File>>,
 ) -> Result<HashMap<u32, Subject>, ComposeError> {
@@ -287,23 +285,29 @@ fn load_category(
 mod tests {
     use super::*;
     use crate::fixtures_data::{
-        self, fixture_path, ACTION_INDEX, ACTION_LEVEL, ACTION_PROMPT, OUTFIT_INDEX, OUTFIT_LEVEL,
-        OUTFIT_PROMPT, SUBJECT_BODY, SUBJECT_NAME, SUBJECT_ROW,
+        self, fixture_path, ACTION_INDEX, ACTION_LEVEL, ACTION_PROMPT, ALT_SUBJECT_BODY,
+        ALT_SUBJECT_ROW, FIXTURE_ACTION_COUNT, FIXTURE_OUTFIT_COUNT, FIXTURE_POSE_COUNT,
+        FIXTURE_SCENE_COUNT, FIXTURE_SUBJECT_COUNT, OUTFIT_INDEX, OUTFIT_LEVEL, OUTFIT_PROMPT,
+        SUBJECT_BODY, SUBJECT_NAME, SUBJECT_ROW,
     };
 
     #[test]
     fn loads_minimal_fixture() {
         let catalog = Catalog::load(&fixture_path()).unwrap();
         let counts = catalog.counts();
-        assert_eq!(counts.subjects, 1);
-        assert_eq!(counts.outfits, 1);
-        assert_eq!(counts.poses, 1);
-        assert_eq!(counts.actions, 1);
-        assert_eq!(counts.scenes, 1);
+        assert_eq!(counts.subjects, FIXTURE_SUBJECT_COUNT);
+        assert_eq!(counts.outfits, FIXTURE_OUTFIT_COUNT);
+        assert_eq!(counts.poses, FIXTURE_POSE_COUNT);
+        assert_eq!(counts.actions, FIXTURE_ACTION_COUNT);
+        assert_eq!(counts.scenes, FIXTURE_SCENE_COUNT);
 
         let subject = catalog.subject(SUBJECT_ROW).unwrap();
         assert_eq!(subject.name, SUBJECT_NAME);
         assert_eq!(subject.body, SUBJECT_BODY);
+        assert_eq!(
+            catalog.subject(ALT_SUBJECT_ROW).unwrap().body,
+            ALT_SUBJECT_BODY
+        );
 
         assert_eq!(
             catalog

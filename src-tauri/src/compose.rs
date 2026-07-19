@@ -4,7 +4,7 @@ use crate::catalog::Catalog;
 use crate::error::ComposeError;
 use crate::parse::{parse_query, ParsedQuery};
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct PromptPart {
     pub kind: String,
     pub label: String,
@@ -68,8 +68,9 @@ mod tests {
     use super::*;
     use crate::catalog::Category;
     use crate::fixtures_data::{
-        self, fixture_path, GOLDEN_PROMPT, GOLDEN_PROMPT_WITH_SCENE, GOLDEN_QUERY,
-        GOLDEN_QUERY_WITH_SCENE,
+        self, fixture_path, ALT_PROMPT, ALT_PROMPT_WITH_SCENE, ALT_QUERY, ALT_QUERY_WITH_SCENE,
+        GOLDEN_PROMPT, GOLDEN_PROMPT_WITH_SCENE, GOLDEN_QUERY, GOLDEN_QUERY_SLASH,
+        GOLDEN_QUERY_WITH_SCENE, OUTFIT_ONLY_PROMPT, OUTFIT_ONLY_QUERY,
     };
 
     fn load_fixture() -> Catalog {
@@ -91,6 +92,63 @@ mod tests {
         let result = compose_from_query(&catalog, GOLDEN_QUERY_WITH_SCENE).unwrap();
         assert_eq!(result.prompt, GOLDEN_PROMPT_WITH_SCENE);
         assert_eq!(result.parts.len(), 5);
+    }
+
+    #[test]
+    fn slash_shorthand_composes_same_as_lvl() {
+        let catalog = load_fixture();
+        let lvl = compose_from_query(&catalog, GOLDEN_QUERY).unwrap();
+        let slash = compose_from_query(&catalog, GOLDEN_QUERY_SLASH).unwrap();
+        assert_eq!(slash.prompt, lvl.prompt);
+        assert_eq!(slash.query, GOLDEN_QUERY);
+        assert_eq!(slash.parts, lvl.parts);
+    }
+
+    #[test]
+    fn alternate_subject_and_levels() {
+        let catalog = load_fixture();
+        let result = compose_from_query(&catalog, ALT_QUERY).unwrap();
+        assert_eq!(result.prompt, ALT_PROMPT);
+        assert_eq!(result.parts.len(), 4);
+        assert_eq!(result.query, ALT_QUERY);
+    }
+
+    #[test]
+    fn alternate_with_scene() {
+        let catalog = load_fixture();
+        let result = compose_from_query(&catalog, ALT_QUERY_WITH_SCENE).unwrap();
+        assert_eq!(result.prompt, ALT_PROMPT_WITH_SCENE);
+        assert_eq!(result.parts.len(), 5);
+    }
+
+    #[test]
+    fn outfit_only_query() {
+        let catalog = load_fixture();
+        let result = compose_from_query(&catalog, OUTFIT_ONLY_QUERY).unwrap();
+        assert_eq!(result.prompt, OUTFIT_ONLY_PROMPT);
+        assert_eq!(result.parts.len(), 2);
+    }
+
+    #[test]
+    fn missing_subject_row_errors() {
+        let catalog = load_fixture();
+        let err = compose_from_query(&catalog, "99 1lvl1").unwrap_err();
+        assert!(
+            err.to_string().contains("not found")
+                || format!("{err:?}").contains("subject_out_of_range")
+        );
+    }
+
+    #[test]
+    fn missing_category_entry_errors() {
+        let catalog = load_fixture();
+        // Valid parse (level 3 index 1) but no Outfit L3-01 in the fixture.
+        let err = compose_from_query(&catalog, "2 3lvl1").unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("not found") || format!("{err:?}").contains("entry_not_found"),
+            "unexpected error: {msg}"
+        );
     }
 
     #[test]

@@ -2,7 +2,8 @@ use app_lib::archive::{
     clear_archive_in, compose_with_state, import_archive_into, load_state_from_dir, AppState,
 };
 use app_lib::fixtures_data::{
-    fixture_path, GOLDEN_PROMPT, GOLDEN_PROMPT_WITH_SCENE, GOLDEN_QUERY, GOLDEN_QUERY_WITH_SCENE,
+    fixture_path, ALT_PROMPT, ALT_QUERY, GOLDEN_PROMPT, GOLDEN_PROMPT_WITH_SCENE, GOLDEN_QUERY,
+    GOLDEN_QUERY_WITH_SCENE,
 };
 use tempfile::tempdir;
 
@@ -23,14 +24,17 @@ fn archive_lifecycle_import_compose_clear() {
         Some("minimal_prompt_archive.xlsx")
     );
     let counts = status.counts.expect("counts");
-    assert_eq!(counts.subjects, 1);
-    assert_eq!(counts.outfits, 1);
+    assert_eq!(counts.subjects, 2);
+    assert_eq!(counts.outfits, 3);
 
     let result = compose_with_state(&state, GOLDEN_QUERY).unwrap();
     assert_eq!(result.prompt, GOLDEN_PROMPT);
 
     let with_scene = compose_with_state(&state, GOLDEN_QUERY_WITH_SCENE).unwrap();
     assert_eq!(with_scene.prompt, GOLDEN_PROMPT_WITH_SCENE);
+
+    let alt = compose_with_state(&state, ALT_QUERY).unwrap();
+    assert_eq!(alt.prompt, ALT_PROMPT);
 
     let cleared = clear_archive_in(&mut state, data_dir).unwrap();
     assert!(!cleared.loaded);

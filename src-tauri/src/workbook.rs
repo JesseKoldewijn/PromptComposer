@@ -4,6 +4,9 @@ use std::path::Path;
 
 use rust_xlsxwriter::{Workbook, XlsxError};
 
+use crate::archive_schema::{
+    CATEGORY_HEADERS, CATEGORY_SHEETS, HOW_TO_SHEET, SUBJECT_HEADERS, SUBJECT_SHEET_CANONICAL,
+};
 use crate::error::ComposeError;
 
 /// Write a starter archive with the sheets/columns this app expects.
@@ -14,12 +17,11 @@ pub fn write_template_archive(path: &Path) -> Result<(), ComposeError> {
     {
         let sheet = workbook
             .add_worksheet()
-            .set_name("Subjects")
+            .set_name(SUBJECT_SHEET_CANONICAL)
             .map_err(xlsx_err)?;
-        sheet.write_string(0, 0, "Name").map_err(xlsx_err)?;
-        sheet.write_string(0, 1, "Body").map_err(xlsx_err)?;
-        sheet.write_string(0, 2, "Outfit").map_err(xlsx_err)?;
-        sheet.write_string(0, 3, "Accessories").map_err(xlsx_err)?;
+        for (i, &header) in SUBJECT_HEADERS.iter().enumerate() {
+            sheet.write_string(0, i as u16, header).map_err(xlsx_err)?;
+        }
         // Excel row 2 → query token `2`
         sheet
             .write_string(1, 0, "e.g. Alice (display name)")
@@ -39,39 +41,40 @@ pub fn write_template_archive(path: &Path) -> Result<(), ComposeError> {
             .map_err(xlsx_err)?;
     }
 
-    write_category_sheet(
-        &mut workbook,
-        "Outfits",
-        "Outfit L1-01",
-        1,
-        "e.g. wearing school uniform, white blouse — outfit prompt for 1lvl1",
-    )?;
-    write_category_sheet(
-        &mut workbook,
-        "Poses",
-        "Pose L2-01",
-        2,
-        "e.g. standing, looking at viewer — pose prompt for 2lvl1",
-    )?;
-    write_category_sheet(
-        &mut workbook,
-        "Actions",
-        "Action L1-02",
-        1,
-        "e.g. holding a book, slight smile — action prompt for 1lvl2",
-    )?;
-    write_category_sheet(
-        &mut workbook,
-        "Scenes",
-        "Scene L3-01",
-        3,
-        "e.g. classroom interior, soft daylight — optional scene for 3lvl1",
-    )?;
+    let category_samples = [
+        (
+            CATEGORY_SHEETS[0],
+            "Outfit L1-01",
+            1u8,
+            "e.g. wearing school uniform, white blouse — outfit prompt for 1lvl1",
+        ),
+        (
+            CATEGORY_SHEETS[1],
+            "Pose L2-01",
+            2,
+            "e.g. standing, looking at viewer — pose prompt for 2lvl1",
+        ),
+        (
+            CATEGORY_SHEETS[2],
+            "Action L1-02",
+            1,
+            "e.g. holding a book, slight smile — action prompt for 1lvl2",
+        ),
+        (
+            CATEGORY_SHEETS[3],
+            "Scene L3-01",
+            3,
+            "e.g. classroom interior, soft daylight — optional scene for 3lvl1",
+        ),
+    ];
+    for (sheet_name, entry_name, level, prompt_hint) in category_samples {
+        write_category_sheet(&mut workbook, sheet_name, entry_name, level, prompt_hint)?;
+    }
 
     {
         let sheet = workbook
             .add_worksheet()
-            .set_name("HowTo")
+            .set_name(HOW_TO_SHEET)
             .map_err(xlsx_err)?;
         let lines = [
             "Prompt Composer archive template",
@@ -113,10 +116,9 @@ fn write_category_sheet(
         .add_worksheet()
         .set_name(sheet_name)
         .map_err(xlsx_err)?;
-    sheet.write_string(0, 0, "Name").map_err(xlsx_err)?;
-    sheet.write_string(0, 1, "Level").map_err(xlsx_err)?;
-    sheet.write_string(0, 2, "Status").map_err(xlsx_err)?;
-    sheet.write_string(0, 3, "Prompt").map_err(xlsx_err)?;
+    for (i, &header) in CATEGORY_HEADERS.iter().enumerate() {
+        sheet.write_string(0, i as u16, header).map_err(xlsx_err)?;
+    }
     sheet.write_string(1, 0, entry_name).map_err(xlsx_err)?;
     sheet
         .write_number(1, 1, f64::from(level))
