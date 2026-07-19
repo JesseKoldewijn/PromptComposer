@@ -112,6 +112,8 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           # Annotated tag pointing at this commit; shared across matrix jobs.
           tagName: ${{ steps.ver.outputs.tag }}
@@ -120,10 +122,13 @@ jobs:
             Release for commit `${{ github.sha }}` (`${{ steps.ver.outputs.short_sha }}`).
 
             **Install / upgrade**
-            - **Windows:** run the NSIS `-setup.exe`. If Prompt Composer is already installed, the installer offers reinstall/upgrade (same `com.promptcomposer.app` product id).
-            - **Linux:** install/upgrade the `.deb` (`sudo dpkg -i …` or your package manager). AppImage: replace the previous AppImage file.
+            - **Windows / AppImage:** the app checks GitHub Releases on startup and can install signed updates in-app.
+            - **Windows (manual):** run the NSIS `-setup.exe` (same `com.promptcomposer.app` product id).
+            - **Linux `.deb`:** install/upgrade with your package manager (`sudo dpkg -i …`). In-app updates apply to AppImage/NSIS, not `.deb`.
 
             Version `${{ steps.ver.outputs.version }}` increases on every successful `main` release so upgrades are recognized.
           releaseDraft: false
           prerelease: false
+          uploadUpdaterJson: true
+          updaterJsonPreferNsis: true
           args: ${{ matrix.args }}

@@ -13,6 +13,7 @@ import type {
   ComposeResult,
 } from './types';
 import { errorMessage } from './types';
+import { checkForAppUpdate } from './updater';
 
 export function App() @{
   const [status, setStatus] = useState(null as ArchiveStatus | null);
@@ -28,6 +29,7 @@ export function App() @{
     archiveStatus()
       .then((s) => setStatus(s))
       .catch((err) => setBootError(errorMessage(err).message));
+    void checkForAppUpdate();
   }, []);
 
   async function onImport() {
