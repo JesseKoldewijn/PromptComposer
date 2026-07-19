@@ -1,0 +1,32 @@
+# Dependencies & build
+node_modules/
+dist/
+src-tauri/target/
+
+# Logs & local tooling
+logs/
+*.log
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+database
+
+# E2E isolated app data (and probe variants)
+.e2e-data/
+.e2e-data-*/
+
+# Test / coverage caches
+coverage/
+.vitest/
+.turbo/
+*.tsbuildinfo
+
+# OS
+Thumbs.db

@@ -1,0 +1,17 @@
+import { defineConfig } from 'vite';
+import { octane } from '@octanejs/vite-plugin';
+
+export default defineConfig({
+  plugins: [octane()],
+  clearScreen: false,
+  server: {
+    port: 5173,
+    strictPort: true,
+  },
+  envPrefix: ['VITE_', 'TAURI_'],
+  build: {
+    target: 'esnext',
+    minify: !process.env.TAURI_DEBUG ? 'esbuild' : false,
+    sourcemap: !!process.env.TAURI_DEBUG,
+  },
+});

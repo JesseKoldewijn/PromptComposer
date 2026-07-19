@@ -1,0 +1,129 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    name: Lint & test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26.3.0'
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install Linux webkit deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Lint, unit, integration, API e2e
+        run: npm run test:ci
+
+  release:
+    name: Build & publish
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-22.04
+            args: --bundles deb,appimage
+          - platform: windows-latest
+            args: --bundles nsis
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26.3.0'
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          shared-key: release-${{ matrix.platform }}
+
+      - name: Install Linux webkit deps
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libfuse2
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Set release version from run number
+        id: ver
+        shell: bash
+        run: |
+          VERSION="0.1.${{ github.run_number }}"
+          SHORT_SHA="$(git rev-parse --short HEAD)"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          node scripts/set-version.mjs "$VERSION"
+
+      - name: Build installers and attach to tagged GitHub Release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Annotated tag pointing at this commit; shared across matrix jobs.
+          tagName: ${{ steps.ver.outputs.tag }}
+          releaseName: Prompt Composer ${{ steps.ver.outputs.tag }}
+          releaseBody: |
+            Release for commit `${{ github.sha }}` (`${{ steps.ver.outputs.short_sha }}`).
+
+            **Install / upgrade**
+            - **Windows:** run the NSIS `-setup.exe`. If Prompt Composer is already installed, the installer offers reinstall/upgrade (same `com.promptcomposer.app` product id).
+            - **Linux:** install/upgrade the `.deb` (`sudo dpkg -i …` or your package manager). AppImage: replace the previous AppImage file.
+
+            Version `${{ steps.ver.outputs.version }}` increases on every successful `main` release so upgrades are recognized.
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
