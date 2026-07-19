@@ -108,12 +108,33 @@ jobs:
           echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
           node scripts/set-version.mjs "$VERSION"
 
+      # GitHub secret UI often wraps long base64 keys with newlines (ASCII 10),
+      # which breaks Tauri's base64 decode. Our key is single-line base64.
+      - name: Normalize updater signing key
+        shell: bash
+        env:
+          RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          RAW_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          KEY="$(printf '%s' "$RAW_KEY" | tr -d '\n\r')"
+          if [ -z "$KEY" ]; then
+            echo "TAURI_SIGNING_PRIVATE_KEY secret is empty" >&2
+            exit 1
+          fi
+          {
+            echo "TAURI_SIGNING_PRIVATE_KEY<<EOF"
+            echo "$KEY"
+            echo "EOF"
+            echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD<<EOF"
+            printf '%s' "$RAW_PASSWORD" | tr -d '\n\r'
+            echo
+            echo "EOF"
+          } >> "$GITHUB_ENV"
+
       - name: Build installers and attach to tagged GitHub Release
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           # Annotated tag pointing at this commit; shared across matrix jobs.
           tagName: ${{ steps.ver.outputs.tag }}
@@ -123,12 +144,33 @@ jobs:
 
             **Install / upgrade**
             - **Windows / AppImage:** the app checks GitHub Releases on startup and can install signed updates in-app.
-            - **Windows (manual):** run the NSIS `-setup.exe` (same `com.promptcomposer.app` product id).
+            - **Windows (manual):** run the NSIS `-setup.exe` (product id `com.promptcomposer.desktop`).
             - **Linux `.deb`:** install/upgrade with your package manager (`sudo dpkg -i …`). In-app updates apply to AppImage/NSIS, not `.deb`.
 
             Version `${{ steps.ver.outputs.version }}` increases on every successful `main` release so upgrades are recognized.
           releaseDraft: false
           prerelease: false
-          uploadUpdaterJson: true
+          includeUpdaterJson: true
           updaterJsonPreferNsis: true
           args: ${{ matrix.args }}
+
+      # Stable names for ELL-Toolkit Vercel rewrites (releases/latest/download/…).
+      - name: Upload stable toolkit download assets
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.ver.outputs.tag }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          set -euo pipefail
+          VERSIONED="$(find src-tauri/target/release/bundle/nsis -name '*x64-setup.exe' -type f | head -n1)"
+          if [ -z "$VERSIONED" ]; then
+            echo "NSIS setup.exe not found under bundle/nsis" >&2
+            ls -laR src-tauri/target/release/bundle || true
+            exit 1
+          fi
+          cp "$VERSIONED" Prompt.Composer_x64-setup.exe
+          printf '%s\n' "{\"version\":\"${VERSION}\",\"tag\":\"${TAG}\"}" > version.json
+          gh release upload "$TAG" version.json Prompt.Composer_x64-setup.exe --clobber
+          echo "Uploaded version.json and Prompt.Composer_x64-setup.exe to $TAG"

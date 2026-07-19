@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Prompt Composer",
   "version": "0.1.0",
-  "identifier": "com.promptcomposer.app",
+  "identifier": "com.promptcomposer.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
