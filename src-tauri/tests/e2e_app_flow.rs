@@ -4,7 +4,9 @@
 use app_lib::archive::{
     clear_archive_in, compose_with_state, import_archive_into, load_state_from_dir, AppState,
 };
-use app_lib::fixtures_data::{fixture_path, GOLDEN_PROMPT, GOLDEN_QUERY};
+use app_lib::fixtures_data::{
+    fixture_path, ALT_PROMPT, ALT_QUERY, GOLDEN_PROMPT, GOLDEN_QUERY,
+};
 use tempfile::tempdir;
 
 #[test]
@@ -30,11 +32,24 @@ fn e2e_empty_import_compose_error_clear() {
         Some("minimal_prompt_archive.xlsx")
     );
 
-    // Compose golden
+    // Compose golden + alternate subject/levels
     let result = compose_with_state(&state, GOLDEN_QUERY).unwrap();
     assert_eq!(result.prompt, GOLDEN_PROMPT);
     assert_eq!(result.query, GOLDEN_QUERY);
     assert_eq!(result.parts.len(), 4);
+
+    assert_eq!(
+        compose_with_state(&state, ALT_QUERY).unwrap().prompt,
+        ALT_PROMPT
+    );
+
+    // Missing catalog entry (valid syntax)
+    let missing = compose_with_state(&state, "2 3lvl1").unwrap_err();
+    assert!(
+        missing.to_string().contains("not found")
+            || format!("{missing:?}").contains("entry_not_found"),
+        "unexpected: {missing}"
+    );
 
     // Bad query validation
     let bad = compose_with_state(&state, "abc 2 1lvl1").unwrap_err();

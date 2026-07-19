@@ -1,10 +1,13 @@
 use std::path::PathBuf;
 
-use app_lib::fixtures_data::{
-    self, ACTION_NAME, ACTION_PROMPT, OUTFIT_NAME, OUTFIT_PROMPT, POSE_NAME, POSE_PROMPT,
-    SCENE_NAME, SCENE_PROMPT, SUBJECT_BODY, SUBJECT_NAME,
+use app_lib::archive_schema::{
+    CATEGORY_HEADERS, CATEGORY_SHEETS, SUBJECT_HEADERS, SUBJECT_SHEET_CANONICAL,
 };
-use rust_xlsxwriter::{Workbook, XlsxError};
+use app_lib::fixtures_data::{
+    self, CategoryRow, ALT_SUBJECT_BODY, ALT_SUBJECT_NAME, FIXTURE_ACTIONS, FIXTURE_OUTFITS,
+    FIXTURE_POSES, FIXTURE_SCENES, SUBJECT_BODY, SUBJECT_NAME,
+};
+use rust_xlsxwriter::{Workbook, Worksheet, XlsxError};
 
 fn main() -> Result<(), XlsxError> {
     let out = resolve_out_path();
@@ -15,43 +18,60 @@ fn main() -> Result<(), XlsxError> {
     let mut workbook = Workbook::new();
 
     {
-        let sheet = workbook.add_worksheet().set_name("Subjects")?;
-        sheet.write_string(0, 0, "Name")?;
-        sheet.write_string(0, 1, "Body")?;
-        sheet.write_string(0, 2, "Outfit")?;
-        sheet.write_string(0, 3, "Accessories")?;
+        let sheet = workbook
+            .add_worksheet()
+            .set_name(SUBJECT_SHEET_CANONICAL)?;
+        for (i, &header) in SUBJECT_HEADERS.iter().enumerate() {
+            sheet.write_string(0, i as u16, header)?;
+        }
+        // Excel row 2 → query token `2`
         sheet.write_string(1, 0, SUBJECT_NAME)?;
         sheet.write_string(1, 1, SUBJECT_BODY)?;
+        // Excel row 3 → query token `3`
+        sheet.write_string(2, 0, ALT_SUBJECT_NAME)?;
+        sheet.write_string(2, 1, ALT_SUBJECT_BODY)?;
     }
 
-    write_category(&mut workbook, "Outfits", OUTFIT_NAME, 1, OUTFIT_PROMPT)?;
-    write_category(&mut workbook, "Poses", POSE_NAME, 2, POSE_PROMPT)?;
-    write_category(&mut workbook, "Actions", ACTION_NAME, 1, ACTION_PROMPT)?;
-    write_category(&mut workbook, "Scenes", SCENE_NAME, 3, SCENE_PROMPT)?;
+    write_category_sheet(&mut workbook, CATEGORY_SHEETS[0], FIXTURE_OUTFITS)?;
+    write_category_sheet(&mut workbook, CATEGORY_SHEETS[1], FIXTURE_POSES)?;
+    write_category_sheet(&mut workbook, CATEGORY_SHEETS[2], FIXTURE_ACTIONS)?;
+    write_category_sheet(&mut workbook, CATEGORY_SHEETS[3], FIXTURE_SCENES)?;
 
     workbook.save(&out)?;
     println!("wrote {}", out.display());
     println!("golden query: {}", fixtures_data::GOLDEN_QUERY);
     println!("golden prompt: {}", fixtures_data::GOLDEN_PROMPT);
+    println!("alt query: {}", fixtures_data::ALT_QUERY);
+    println!("alt prompt: {}", fixtures_data::ALT_PROMPT);
     Ok(())
 }
 
-fn write_category(
+fn write_category_sheet(
     workbook: &mut Workbook,
     sheet_name: &str,
-    entry_name: &str,
+    rows: &[CategoryRow],
+) -> Result<(), XlsxError> {
+    let sheet = workbook.add_worksheet().set_name(sheet_name)?;
+    for (i, &header) in CATEGORY_HEADERS.iter().enumerate() {
+        sheet.write_string(0, i as u16, header)?;
+    }
+    for (row_idx, &(name, level, prompt)) in rows.iter().enumerate() {
+        write_category_row(sheet, (row_idx + 1) as u32, name, level, prompt)?;
+    }
+    Ok(())
+}
+
+fn write_category_row(
+    sheet: &mut Worksheet,
+    row: u32,
+    name: &str,
     level: u8,
     prompt: &str,
 ) -> Result<(), XlsxError> {
-    let sheet = workbook.add_worksheet().set_name(sheet_name)?;
-    sheet.write_string(0, 0, "Name")?;
-    sheet.write_string(0, 1, "Level")?;
-    sheet.write_string(0, 2, "Status")?;
-    sheet.write_string(0, 3, "Prompt")?;
-    sheet.write_string(1, 0, entry_name)?;
-    sheet.write_number(1, 1, level as f64)?;
-    sheet.write_string(1, 2, "USE")?;
-    sheet.write_string(1, 3, prompt)?;
+    sheet.write_string(row, 0, name)?;
+    sheet.write_number(row, 1, f64::from(level))?;
+    sheet.write_string(row, 2, "USE")?;
+    sheet.write_string(row, 3, prompt)?;
     Ok(())
 }
 

@@ -1,4 +1,5 @@
 pub mod archive;
+pub mod archive_schema;
 pub mod catalog;
 pub mod commands;
 pub mod compose;
