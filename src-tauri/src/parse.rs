@@ -19,7 +19,7 @@ pub fn parse_query(input: &str) -> Result<ParsedQuery, ComposeError> {
     if trimmed.is_empty() {
         return Err(ComposeError::invalid(
             "empty",
-            "query is empty — expected e.g. `7 1lvl5 2lvl3 1lvl4`",
+            "query is empty — expected e.g. `7 1lvl5 2lvl3 1lvl4` or `7 1/5 2/3 1/4`",
         ));
     }
 
@@ -27,7 +27,7 @@ pub fn parse_query(input: &str) -> Result<ParsedQuery, ComposeError> {
     if tokens.is_empty() {
         return Err(ComposeError::invalid(
             "incomplete",
-            "expected `<row>` followed by 1–4 `NlvlM` tokens",
+            "expected `<row>` followed by 1–4 `NlvlM` or `N/M` tokens",
         ));
     }
 
@@ -58,7 +58,7 @@ pub fn parse_query(input: &str) -> Result<ParsedQuery, ComposeError> {
     if module_tokens.is_empty() {
         return Err(ComposeError::invalid(
             "missing_modules",
-            "add at least one module token like `1lvl5` (Outfit), then Pose/Action/Scene",
+            "add at least one module token like `1lvl5` or `1/5` (Outfit), then Pose/Action/Scene",
         ));
     }
     if module_tokens.len() > 4 {
@@ -98,24 +98,29 @@ fn parse_module_token(raw: &str) -> Result<(u8, u8), ComposeError> {
             && level_s.chars().all(|c| c.is_ascii_digit())
             && index_s.chars().all(|c| c.is_ascii_digit())
         {
-            let level: u8 = level_s.parse().map_err(|_| {
-                ComposeError::invalid("level_invalid", format!("invalid level in `{raw}`"))
-            })?;
-            let index: u8 = index_s.parse().map_err(|_| {
-                ComposeError::invalid("index_invalid", format!("invalid index in `{raw}`"))
-            })?;
-            validate_level_index(level, index, raw)?;
-            return Ok((level, index));
+            return parse_level_index_parts(level_s, index_s, raw);
+        }
+    }
+
+    // Shorthand: N/M  e.g. 1/5
+    if let Some((level_s, index_s)) = lower.split_once('/') {
+        if !level_s.is_empty()
+            && !index_s.is_empty()
+            && level_s.chars().all(|c| c.is_ascii_digit())
+            && index_s.chars().all(|c| c.is_ascii_digit())
+            && !index_s.contains('/')
+        {
+            return parse_level_index_parts(level_s, index_s, raw);
         }
     }
 
     // Friendly suggestions for common typos
     let suggestion = if lower.contains("level") {
-        Some("use NlvlM (e.g. 1lvl5), not `level`".to_string())
+        Some("use NlvlM or N/M (e.g. 1lvl5 or 1/5), not `level`".to_string())
     } else if lower.contains("lv") && !lower.contains("lvl") {
-        Some("did you mean NlvlM? (two letters: lvl)".to_string())
+        Some("did you mean NlvlM or N/M? (e.g. 1lvl5 or 1/5)".to_string())
     } else if lower.starts_with("lvl") {
-        Some("put the level number first, e.g. 1lvl5".to_string())
+        Some("put the level number first, e.g. 1lvl5 or 1/5".to_string())
     } else {
         None
     };
@@ -123,14 +128,29 @@ fn parse_module_token(raw: &str) -> Result<(u8, u8), ComposeError> {
     Err(match suggestion {
         Some(s) => ComposeError::invalid_suggest(
             "malformed_module",
-            format!("malformed module `{raw}` — expected pattern NlvlM (e.g. 1lvl5)"),
+            format!("malformed module `{raw}` — expected NlvlM or N/M (e.g. 1lvl5 or 1/5)"),
             s,
         ),
         None => ComposeError::invalid(
             "malformed_module",
-            format!("malformed module `{raw}` — expected pattern NlvlM (e.g. 1lvl5)"),
+            format!("malformed module `{raw}` — expected NlvlM or N/M (e.g. 1lvl5 or 1/5)"),
         ),
     })
+}
+
+fn parse_level_index_parts(
+    level_s: &str,
+    index_s: &str,
+    raw: &str,
+) -> Result<(u8, u8), ComposeError> {
+    let level: u8 = level_s
+        .parse()
+        .map_err(|_| ComposeError::invalid("level_invalid", format!("invalid level in `{raw}`")))?;
+    let index: u8 = index_s
+        .parse()
+        .map_err(|_| ComposeError::invalid("index_invalid", format!("invalid index in `{raw}`")))?;
+    validate_level_index(level, index, raw)?;
+    Ok((level, index))
 }
 
 fn validate_level_index(level: u8, index: u8, raw: &str) -> Result<(), ComposeError> {
@@ -186,6 +206,13 @@ mod tests {
         assert_eq!(q.modules[0].category, Category::Outfit);
         assert_eq!(q.modules[1].category, Category::Pose);
         assert_eq!(q.modules[2].category, Category::Action);
+    }
+
+    #[test]
+    fn parses_slash_shorthand() {
+        let lvl = parse_query("7 1lvl5 2lvl3 1lvl4").unwrap();
+        let slash = parse_query("7 1/5 2/3 1/4").unwrap();
+        assert_eq!(lvl, slash);
     }
 
     #[test]

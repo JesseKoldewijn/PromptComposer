@@ -43,6 +43,8 @@ npm run fixture:gen
 <excel-row> <level>lvl<index> [<level>lvl<index> ...]
 ```
 
+Shorthand `N/M` is equivalent to `NlvlM` (e.g. `7 1/5 2/3 1/4` ≡ `7 1lvl5 2lvl3 1lvl4`).
+
 Token order after the row: Outfit → Pose → Action → Scene (optional).
 
 ## Tests

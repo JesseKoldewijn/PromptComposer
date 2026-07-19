@@ -194,9 +194,11 @@ export function App() @{
             onInput={(event) => setQuery(event.currentTarget.value)}
           />
           <p class="hint">
-            {'Pattern: '}
-            <code>&lt;row&gt; &lt;level&gt;lvl&lt;index&gt; …</code>
-            {' — Outfit, Pose, Action, optional Scene'}
+            {'Examples: '}
+            <code>{'7 1lvl5 2lvl3 1lvl4'}</code>
+            {' or '}
+            <code>{'7 1/5 2/3 1/4'}</code>
+            {' — row, then Outfit / Pose / Action / optional Scene'}
           </p>
           <div class="actions">
             <button
