@@ -4,9 +4,7 @@
 use app_lib::archive::{
     clear_archive_in, compose_with_state, import_archive_into, load_state_from_dir, AppState,
 };
-use app_lib::fixtures_data::{
-    fixture_path, ALT_PROMPT, ALT_QUERY, GOLDEN_PROMPT, GOLDEN_QUERY,
-};
+use app_lib::fixtures_data::{fixture_path, ALT_PROMPT, ALT_QUERY, GOLDEN_PROMPT, GOLDEN_QUERY};
 use tempfile::tempdir;
 
 #[test]

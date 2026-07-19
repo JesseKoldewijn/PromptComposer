@@ -18,9 +18,7 @@ fn main() -> Result<(), XlsxError> {
     let mut workbook = Workbook::new();
 
     {
-        let sheet = workbook
-            .add_worksheet()
-            .set_name(SUBJECT_SHEET_CANONICAL)?;
+        let sheet = workbook.add_worksheet().set_name(SUBJECT_SHEET_CANONICAL)?;
         for (i, &header) in SUBJECT_HEADERS.iter().enumerate() {
             sheet.write_string(0, i as u16, header)?;
         }

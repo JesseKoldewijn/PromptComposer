@@ -20,9 +20,7 @@ pub fn write_template_archive(path: &Path) -> Result<(), ComposeError> {
             .set_name(SUBJECT_SHEET_CANONICAL)
             .map_err(xlsx_err)?;
         for (i, &header) in SUBJECT_HEADERS.iter().enumerate() {
-            sheet
-                .write_string(0, i as u16, header)
-                .map_err(xlsx_err)?;
+            sheet.write_string(0, i as u16, header).map_err(xlsx_err)?;
         }
         // Excel row 2 → query token `2`
         sheet
@@ -119,9 +117,7 @@ fn write_category_sheet(
         .set_name(sheet_name)
         .map_err(xlsx_err)?;
     for (i, &header) in CATEGORY_HEADERS.iter().enumerate() {
-        sheet
-            .write_string(0, i as u16, header)
-            .map_err(xlsx_err)?;
+        sheet.write_string(0, i as u16, header).map_err(xlsx_err)?;
     }
     sheet.write_string(1, 0, entry_name).map_err(xlsx_err)?;
     sheet

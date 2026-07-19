@@ -70,9 +70,8 @@ impl ShapeOptions {
 ///
 /// Extra sheets are allowed. Status cell values are not checked.
 pub fn assert_archive_shape(path: &Path, options: ShapeOptions) -> Result<(), ComposeError> {
-    let mut workbook: Xlsx<_> = calamine::open_workbook(path).map_err(|e| {
-        ComposeError::Catalog(format!("open workbook for shape check: {e}"))
-    })?;
+    let mut workbook: Xlsx<_> = calamine::open_workbook(path)
+        .map_err(|e| ComposeError::Catalog(format!("open workbook for shape check: {e}")))?;
 
     let sheet_names = workbook.sheet_names().to_vec();
 
@@ -97,10 +96,10 @@ pub fn assert_archive_shape(path: &Path, options: ShapeOptions) -> Result<(), Co
     Ok(())
 }
 
-fn resolve_subjects_sheet<'a>(
-    sheet_names: &'a [String],
+fn resolve_subjects_sheet(
+    sheet_names: &[String],
     allow_legacy: bool,
-) -> Result<&'a str, ComposeError> {
+) -> Result<&str, ComposeError> {
     let has_canonical = sheet_names.iter().any(|n| n == SUBJECT_SHEET_CANONICAL);
     let has_legacy = sheet_names.iter().any(|n| n == SUBJECT_SHEET_LEGACY);
 
@@ -125,9 +124,9 @@ fn assert_headers(
     sheet: &str,
     expected: &[&str],
 ) -> Result<(), ComposeError> {
-    let range = workbook.worksheet_range(sheet).map_err(|e| {
-        ComposeError::Catalog(format!("read sheet `{sheet}` for shape check: {e}"))
-    })?;
+    let range = workbook
+        .worksheet_range(sheet)
+        .map_err(|e| ComposeError::Catalog(format!("read sheet `{sheet}` for shape check: {e}")))?;
 
     let Some(header_row) = range.rows().next() else {
         return Err(ComposeError::Catalog(format!(
@@ -196,7 +195,10 @@ mod tests {
 
         let mut workbook = Workbook::new();
         {
-            let sheet = workbook.add_worksheet().set_name(SUBJECT_SHEET_CANONICAL).unwrap();
+            let sheet = workbook
+                .add_worksheet()
+                .set_name(SUBJECT_SHEET_CANONICAL)
+                .unwrap();
             sheet.write_string(0, 0, "Wrong").unwrap();
             sheet.write_string(0, 1, "Headers").unwrap();
             sheet.write_string(0, 2, "Here").unwrap();
@@ -225,7 +227,10 @@ mod tests {
 
         let mut workbook = Workbook::new();
         {
-            let sheet = workbook.add_worksheet().set_name(SUBJECT_SHEET_CANONICAL).unwrap();
+            let sheet = workbook
+                .add_worksheet()
+                .set_name(SUBJECT_SHEET_CANONICAL)
+                .unwrap();
             for (i, &h) in SUBJECT_HEADERS.iter().enumerate() {
                 sheet.write_string(0, i as u16, h).unwrap();
             }
