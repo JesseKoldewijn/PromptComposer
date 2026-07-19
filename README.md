@@ -78,8 +78,10 @@ Alt: `3 5lvl30 1lvl1 4lvl10` → `BODY_BETA OUTFIT_5_30 POSE_1_1 ACTION_4_10`
 - **Pull requests:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `npm run test:ci` (fmt, clippy, unit, integration, API e2e).
 - **Push to `main`:** [`.github/workflows/release.yml`](.github/workflows/release.yml) re-runs those checks, then builds installers and publishes a GitHub Release.
   - Tag: `v0.1.<run_number>` on the pushed commit (monotonic so upgrades work).
-  - Artifacts: Linux `.deb` + AppImage, Windows NSIS `-setup.exe`.
-  - **Upgrading:** keep product id `com.promptcomposer.app`. Re-run a newer NSIS setup (detects prior install) or install a newer `.deb` over the old package. AppImage: replace the previous file.
+  - Artifacts: Linux `.deb` + AppImage, Windows NSIS `-setup.exe`, plus signed updater `.sig` files and `latest.json` (when signing secrets are set).
+  - **In-app updates:** on startup the app checks `releases/latest/download/latest.json` and can install a newer **NSIS** or **AppImage** build after confirmation. `.deb` installs still upgrade via the package manager.
+  - **Signing secrets (required for updater artifacts):** repo secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (use empty password secret if the key has none). The matching public key is embedded in `src-tauri/tauri.conf.json`. If the private key is lost, already-installed apps cannot verify future updates.
+  - **Manual upgrade fallback:** keep product id `com.promptcomposer.app`. Re-run a newer NSIS setup or install a newer `.deb`; AppImage: replace the previous file.
 
 ### E2E notes
 

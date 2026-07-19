@@ -23,6 +23,12 @@ pub fn archive_status(state: State<'_, Mutex<AppState>>) -> Result<ArchiveStatus
     Ok(status_from_state(&state))
 }
 
+/// True when the process was started under the GUI e2e harness.
+#[tauri::command]
+pub fn is_e2e_session() -> bool {
+    env::var("PROMPT_COMPOSER_E2E").ok().as_deref() == Some("1")
+}
+
 #[tauri::command]
 pub fn compose_query(
     state: State<'_, Mutex<AppState>>,

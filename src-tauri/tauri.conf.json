@@ -26,6 +26,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": ["deb", "appimage", "nsis"],
     "linux": {
       "deb": {
@@ -47,6 +48,17 @@
     ],
     "android": {
       "debugApplicationIdSuffix": ".debug"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDQ4MkIzNTM5MDEwQzVDNkQKUldSdFhBd0JPVFVyU1BxU202N0Q2NU5IOUhLcUNMWmtyWm5qZXRFeUlBSmR6dHZ4MnFidlRGYXUK",
+      "endpoints": [
+        "https://github.com/JesseKoldewijn/PromptComposer/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

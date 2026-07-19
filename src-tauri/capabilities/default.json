@@ -9,6 +9,8 @@
     "clipboard-manager:allow-read-text",
     "dialog:default",
     "store:default",
+    "updater:default",
+    "process:default",
     "wdio:default",
     "wdio-webdriver:default"
   ]

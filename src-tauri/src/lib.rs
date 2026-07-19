@@ -19,7 +19,9 @@ pub fn run() {
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_store::Builder::default().build());
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_store::Builder::default().build())
+        .plugin(tauri_plugin_updater::Builder::new().build());
 
     // Embedded WebDriver must only run under e2e (TAURI_WEBDRIVER_PORT set).
     // init() otherwise defaults to :4445 and hooks every webview during normal `tauri dev`.
@@ -57,6 +59,7 @@ pub fn run() {
                             if let Ok(url) = Url::parse("tauri://localhost") {
                                 let _ = win.navigate(url);
                             }
+                            let _ = win.eval("window.__PROMPT_COMPOSER_E2E__ = true;");
                         }
                     });
                 });
@@ -66,6 +69,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::archive_status,
+            commands::is_e2e_session,
             commands::import_archive,
             commands::import_archive_from_path,
             commands::clear_archive,
