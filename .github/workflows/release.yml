@@ -12,11 +12,58 @@ permissions:
   contents: write
 
 jobs:
+  prepare:
+    name: Bump version on main
+    if: ${{ !contains(github.event.head_commit.message, '[skip release]') }}
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
+      sha: ${{ steps.ver.outputs.sha }}
+      short_sha: ${{ steps.ver.outputs.short_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          # GITHUB_TOKEN push does not retrigger workflows; same run continues.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump version and commit
+        id: ver
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="0.1.${{ github.run_number }}"
+          TAG="v${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+          node scripts/set-version.mjs "$VERSION"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet; then
+            echo "Version already ${VERSION}; reusing HEAD"
+          else
+            git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
+            git commit -m "chore: release ${TAG}"
+            git push origin HEAD:main
+          fi
+
+          SHA="$(git rev-parse HEAD)"
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "Prepared release ${TAG} at ${SHA}"
+
   check:
     name: Lint & test
+    needs: prepare
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -55,7 +102,7 @@ jobs:
 
   release:
     name: Build & publish
-    needs: check
+    needs: [prepare, check]
     strategy:
       fail-fast: false
       matrix:
@@ -68,6 +115,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ needs.prepare.outputs.sha }}
           fetch-depth: 0
 
       - name: Setup Node
@@ -103,17 +151,6 @@ jobs:
       - name: Install dependencies
         run: yarn install --immutable
 
-      - name: Set release version from run number
-        id: ver
-        shell: bash
-        run: |
-          VERSION="0.1.${{ github.run_number }}"
-          SHORT_SHA="$(git rev-parse --short HEAD)"
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
-          node scripts/set-version.mjs "$VERSION"
-
       # GitHub secret UI often wraps long base64 keys with newlines (ASCII 10),
       # which breaks Tauri's base64 decode. Our key is single-line base64.
       - name: Normalize updater signing key
@@ -142,18 +179,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          # Annotated tag pointing at this commit; shared across matrix jobs.
-          tagName: ${{ steps.ver.outputs.tag }}
-          releaseName: Prompt Composer ${{ steps.ver.outputs.tag }}
+          # Annotated tag pointing at the version-bump commit; shared across matrix jobs.
+          tagName: ${{ needs.prepare.outputs.tag }}
+          releaseName: Prompt Composer ${{ needs.prepare.outputs.tag }}
           releaseBody: |
-            Release for commit `${{ github.sha }}` (`${{ steps.ver.outputs.short_sha }}`).
+            Release for commit `${{ needs.prepare.outputs.sha }}` (`${{ needs.prepare.outputs.short_sha }}`).
 
             **Install / upgrade**
             - **Windows / AppImage:** the app checks GitHub Releases on startup and can install signed updates in-app.
             - **Windows (manual):** run the NSIS `-setup.exe` (product id `com.promptcomposer.desktop`).
             - **Linux `.deb`:** install/upgrade with your package manager (`sudo dpkg -i …`). In-app updates apply to AppImage/NSIS, not `.deb`.
 
-            Version `${{ steps.ver.outputs.version }}` increases on every successful `main` release so upgrades are recognized.
+            Version `${{ needs.prepare.outputs.version }}` increases on every successful `main` release so upgrades are recognized.
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
@@ -166,8 +203,8 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ steps.ver.outputs.tag }}
-          VERSION: ${{ steps.ver.outputs.version }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           set -euo pipefail
           VERSIONED="$(find src-tauri/target/release/bundle/nsis -name '*x64-setup.exe' -type f | head -n1)"

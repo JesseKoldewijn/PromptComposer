@@ -35,3 +35,6 @@ replaceFile('src-tauri/tauri.conf.json', (s) =>
 replaceFile('src-tauri/Cargo.toml', (s) =>
   s.replace(/^version = "[^"]+"/m, `version = "${version}"`),
 );
+replaceFile('src-tauri/Cargo.lock', (s) =>
+  s.replace(/(name = "app"\n)version = "[^"]+"/, `$1version = "${version}"`),
+);

@@ -73,22 +73,30 @@ export function errorMessage(err: unknown): ComposeErrorPayload {
   return { code: 'unknown', message: String(err), suggestion: null };
 }
 
-export function formatCategoryRange(label: string, range: CategoryRange | null | undefined): string {
+export function formatCategoryRange(range: CategoryRange | null | undefined): string {
   if (!range) {
-    return `${label}: (none)`;
+    return '(none)';
   }
-  return `${label}: L${range.minLevel}–${range.maxLevel} / I${range.minIndex}–${range.maxIndex}`;
+  return `levels ${range.minLevel}–${range.maxLevel} · indexes ${range.minIndex}–${range.maxIndex}`;
 }
 
-export function formatQueryRangeHint(ranges: CatalogRanges): string {
-  const parts = [
-    `rows ${ranges.subjects.minRow}–${ranges.subjects.maxRow}`,
-    formatCategoryRange('Outfit', ranges.outfits),
-    formatCategoryRange('Pose', ranges.poses),
-    formatCategoryRange('Action', ranges.actions),
+export interface QueryRangeItem {
+  label: string;
+  value: string;
+}
+
+export function formatQueryRangeItems(ranges: CatalogRanges): QueryRangeItem[] {
+  const items: QueryRangeItem[] = [
+    {
+      label: 'Subjects',
+      value: `rows ${ranges.subjects.minRow}–${ranges.subjects.maxRow}`,
+    },
+    { label: 'Outfit', value: formatCategoryRange(ranges.outfits) },
+    { label: 'Pose', value: formatCategoryRange(ranges.poses) },
+    { label: 'Action', value: formatCategoryRange(ranges.actions) },
   ];
   if (ranges.scenes) {
-    parts.push(formatCategoryRange('Scene', ranges.scenes));
+    items.push({ label: 'Scene', value: formatCategoryRange(ranges.scenes) });
   }
-  return parts.join(' · ');
+  return items;
 }

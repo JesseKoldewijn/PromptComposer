@@ -76,8 +76,8 @@ Alt: `3 5lvl30 1lvl1 4lvl10` → `BODY_BETA OUTFIT_5_30 POSE_1_1 ACTION_4_10`
 ### CI & releases
 
 - **Pull requests:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `yarn test:ci` (fmt, clippy, unit, integration, API e2e).
-- **Push to `main`:** [`.github/workflows/release.yml`](.github/workflows/release.yml) re-runs those checks, then builds installers and publishes a GitHub Release.
-  - Tag: `v0.1.<run_number>` on the pushed commit (monotonic so upgrades work).
+- **Push to `main`:** [`.github/workflows/release.yml`](.github/workflows/release.yml) bumps `package.json` / Tauri / Cargo to `0.1.<run_number>`, commits `chore: release v…` on `main`, then runs checks and publishes a GitHub Release tagged on that commit (so main does not lag the release version). Commits with `[skip release]` in the message skip this workflow.
+  - Tag: `v0.1.<run_number>` on the version-bump commit (monotonic so upgrades work).
   - Artifacts: Linux `.deb` + AppImage, Windows NSIS `-setup.exe`, plus signed updater `.sig` files and `latest.json` (when signing secrets are set).
   - **In-app updates:** on startup the app checks `releases/latest/download/latest.json` and can install a newer **NSIS** or **AppImage** build after confirmation. `.deb` installs still upgrade via the package manager.
   - **Signing secrets (required for updater artifacts):** repo secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (use empty password secret if the key has none). The matching public key is embedded in `src-tauri/tauri.conf.json`. If the private key is lost, already-installed apps cannot verify future updates. Prefer a single-line base64 secret (CI also strips newlines).

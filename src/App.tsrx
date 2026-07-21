@@ -13,7 +13,7 @@ import type {
   ComposeErrorPayload,
   ComposeResult,
 } from './types';
-import { errorMessage, formatQueryRangeHint } from './types';
+import { errorMessage, formatQueryRangeItems } from './types';
 import { checkForAppUpdate } from './updater';
 
 export function App() @{
@@ -109,7 +109,7 @@ export function App() @{
 
   const loaded = status?.loaded === true;
   const fileLabel = status?.originalName ?? 'prompt archive';
-  const rangeHint = status?.ranges ? formatQueryRangeHint(status.ranges) : null;
+  const rangeItems = status?.ranges ? formatQueryRangeItems(status.ranges) : null;
 
   <div class="shell" data-testid="app-shell">
     <header class="topbar">
@@ -207,10 +207,18 @@ export function App() @{
             <code>{'7 1/5 2/3 1/4'}</code>
             {' — row, then Outfit / Pose / Action / optional Scene'}
           </p>
-          @if (rangeHint) {
-            <p class="hint" data-testid="range-hint">
-              {('Archive ranges: ' + rangeHint) as string}
-            </p>
+          @if (rangeItems) {
+            <div class="range-hint" data-testid="range-hint">
+              <div class="label">Archive ranges</div>
+              <dl class="range-list">
+                @for (const item of rangeItems; key item.label) {
+                  <div class="range-row">
+                    <dt>{item.label as string}</dt>
+                    <dd>{item.value as string}</dd>
+                  </div>
+                }
+              </dl>
+            </div>
           }
           <div class="actions">
             <button

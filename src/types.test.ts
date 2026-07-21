@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   errorMessage,
   formatCategoryRange,
-  formatQueryRangeHint,
+  formatQueryRangeItems,
   isComposeError,
   type CatalogRanges,
 } from '../src/types';
@@ -44,7 +44,7 @@ describe('errorMessage', () => {
   });
 });
 
-describe('formatQueryRangeHint', () => {
+describe('formatQueryRangeItems', () => {
   const ranges: CatalogRanges = {
     subjects: { minRow: 2, maxRow: 3 },
     outfits: { minLevel: 1, maxLevel: 5, minIndex: 1, maxIndex: 30 },
@@ -53,14 +53,28 @@ describe('formatQueryRangeHint', () => {
     scenes: { minLevel: 1, maxLevel: 5, minIndex: 1, maxIndex: 15 },
   };
 
-  it('formats category ranges', () => {
-    expect(formatCategoryRange('Outfit', ranges.outfits)).toBe('Outfit: L1–5 / I1–30');
-    expect(formatCategoryRange('Pose', null)).toBe('Pose: (none)');
+  it('formats category ranges with spelled-out wording', () => {
+    expect(formatCategoryRange(ranges.outfits)).toBe('levels 1–5 · indexes 1–30');
+    expect(formatCategoryRange(null)).toBe('(none)');
   });
 
-  it('includes subject and category ceilings', () => {
-    expect(formatQueryRangeHint(ranges)).toContain('rows 2–3');
-    expect(formatQueryRangeHint(ranges)).toContain('Outfit: L1–5 / I1–30');
-    expect(formatQueryRangeHint(ranges)).toContain('Scene: L1–5 / I1–15');
+  it('returns stacked subject and category items', () => {
+    expect(formatQueryRangeItems(ranges)).toEqual([
+      { label: 'Subjects', value: 'rows 2–3' },
+      { label: 'Outfit', value: 'levels 1–5 · indexes 1–30' },
+      { label: 'Pose', value: 'levels 1–3 · indexes 1–5' },
+      { label: 'Action', value: 'levels 1–4 · indexes 2–10' },
+      { label: 'Scene', value: 'levels 1–5 · indexes 1–15' },
+    ]);
+  });
+
+  it('omits Scene when absent', () => {
+    const items = formatQueryRangeItems({ ...ranges, scenes: null });
+    expect(items.map((item) => item.label)).toEqual([
+      'Subjects',
+      'Outfit',
+      'Pose',
+      'Action',
+    ]);
   });
 });
