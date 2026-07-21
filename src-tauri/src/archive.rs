@@ -5,7 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::catalog::{Catalog, CatalogCounts, ARCHIVE_FILENAME};
+use crate::catalog::{Catalog, CatalogCounts, CatalogRanges, ARCHIVE_FILENAME};
 use crate::compose::{compose_from_query, ComposeResult};
 use crate::error::ComposeError;
 
@@ -29,6 +29,7 @@ pub struct ArchiveStatus {
     pub original_name: Option<String>,
     pub imported_at: Option<u64>,
     pub counts: Option<CatalogCounts>,
+    pub ranges: Option<CatalogRanges>,
 }
 
 pub fn status_from_state(state: &AppState) -> ArchiveStatus {
@@ -38,12 +39,14 @@ pub fn status_from_state(state: &AppState) -> ArchiveStatus {
             original_name: meta.as_ref().map(|m| m.original_name.clone()),
             imported_at: meta.as_ref().map(|m| m.imported_at),
             counts: Some(catalog.counts()),
+            ranges: Some(catalog.ranges()),
         },
         (None, _) => ArchiveStatus {
             loaded: false,
             original_name: None,
             imported_at: None,
             counts: None,
+            ranges: None,
         },
     }
 }

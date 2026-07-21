@@ -27,6 +27,15 @@ fn archive_lifecycle_import_compose_clear() {
     assert_eq!(counts.subjects, 2);
     assert_eq!(counts.outfits, 3);
 
+    let ranges = status.ranges.expect("ranges");
+    assert_eq!(ranges.subjects.min_row, 2);
+    assert_eq!(ranges.subjects.max_row, 3);
+    let outfits = ranges.outfits.expect("outfit ranges");
+    assert_eq!(outfits.min_level, 1);
+    assert_eq!(outfits.max_level, 5);
+    assert_eq!(outfits.min_index, 1);
+    assert_eq!(outfits.max_index, 30);
+
     let result = compose_with_state(&state, GOLDEN_QUERY).unwrap();
     assert_eq!(result.prompt, GOLDEN_PROMPT);
 

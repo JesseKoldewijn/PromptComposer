@@ -1,8 +1,8 @@
 use serde::Serialize;
 
-use crate::catalog::Catalog;
+use crate::catalog::{Catalog, CategoryRange};
 use crate::error::ComposeError;
-use crate::parse::{parse_query, ParsedQuery};
+use crate::parse::{parse_query, ModuleToken, ParsedQuery};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct PromptPart {
@@ -24,6 +24,8 @@ pub fn compose_from_query(catalog: &Catalog, query: &str) -> Result<ComposeResul
 }
 
 fn compose_parsed(catalog: &Catalog, parsed: &ParsedQuery) -> Result<ComposeResult, ComposeError> {
+    validate_against_ranges(catalog, parsed)?;
+
     let subject = catalog.subject(parsed.subject_row)?;
     let mut parts = Vec::new();
     parts.push(PromptPart {
@@ -52,6 +54,67 @@ fn compose_parsed(catalog: &Catalog, parsed: &ParsedQuery) -> Result<ComposeResu
         parts,
         query: format_canonical_query(parsed),
     })
+}
+
+fn validate_against_ranges(catalog: &Catalog, parsed: &ParsedQuery) -> Result<(), ComposeError> {
+    let ranges = catalog.ranges();
+    let subjects = &ranges.subjects;
+    if parsed.subject_row < subjects.min_row || parsed.subject_row > subjects.max_row {
+        return Err(ComposeError::invalid(
+            "subject_out_of_range",
+            format!(
+                "subject row {} is outside archive range {}–{}",
+                parsed.subject_row, subjects.min_row, subjects.max_row
+            ),
+        ));
+    }
+
+    for module in &parsed.modules {
+        validate_module_against_range(catalog, module)?;
+    }
+    Ok(())
+}
+
+fn validate_module_against_range(
+    catalog: &Catalog,
+    module: &ModuleToken,
+) -> Result<(), ComposeError> {
+    let Some(range) = catalog.category_range_for(module.category) else {
+        return Err(ComposeError::invalid(
+            "entry_not_found",
+            format!(
+                "{} sheet has no entries in the loaded archive",
+                module.category.sheet_name()
+            ),
+        ));
+    };
+    validate_level_index_against_range(module, &range)
+}
+
+fn validate_level_index_against_range(
+    module: &ModuleToken,
+    range: &CategoryRange,
+) -> Result<(), ComposeError> {
+    let label = module.category.label();
+    if module.level < range.min_level || module.level > range.max_level {
+        return Err(ComposeError::invalid(
+            "level_out_of_range",
+            format!(
+                "{label} level must be {}–{} (got {})",
+                range.min_level, range.max_level, module.level
+            ),
+        ));
+    }
+    if module.index < range.min_index || module.index > range.max_index {
+        return Err(ComposeError::invalid(
+            "index_out_of_range",
+            format!(
+                "{label} index must be {}–{} (got {})",
+                range.min_index, range.max_index, module.index
+            ),
+        ));
+    }
+    Ok(())
 }
 
 fn format_canonical_query(parsed: &ParsedQuery) -> String {
@@ -133,20 +196,61 @@ mod tests {
     fn missing_subject_row_errors() {
         let catalog = load_fixture();
         let err = compose_from_query(&catalog, "99 1lvl1").unwrap_err();
+        let msg = err.to_string();
         assert!(
-            err.to_string().contains("not found")
-                || format!("{err:?}").contains("subject_out_of_range")
+            msg.contains("outside archive range")
+                || msg.contains("not found")
+                || format!("{err:?}").contains("subject_out_of_range"),
+            "unexpected error: {msg}"
         );
     }
 
     #[test]
     fn missing_category_entry_errors() {
         let catalog = load_fixture();
-        // Valid parse (level 3 index 1) but no Outfit L3-01 in the fixture.
+        // Within Outfit ceilings (L1–5 / I1–30) but no Outfit L3-01 in the fixture.
         let err = compose_from_query(&catalog, "2 3lvl1").unwrap_err();
         let msg = err.to_string();
         assert!(
             msg.contains("not found") || format!("{err:?}").contains("entry_not_found"),
+            "unexpected error: {msg}"
+        );
+    }
+
+    #[test]
+    fn rejects_level_above_category_max() {
+        let catalog = load_fixture();
+        // Outfit max level in fixture is 5.
+        let err = compose_from_query(&catalog, "2 6lvl1").unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("level") && (msg.contains("1–5") || msg.contains("1-5")),
+            "unexpected error: {msg}"
+        );
+        assert!(format!("{err:?}").contains("level_out_of_range") || msg.contains("level"));
+    }
+
+    #[test]
+    fn rejects_index_above_category_max() {
+        let catalog = load_fixture();
+        // Outfit max index in fixture is 30.
+        let err = compose_from_query(&catalog, "2 1lvl31").unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("index") && (msg.contains("1–30") || msg.contains("1-30")),
+            "unexpected error: {msg}"
+        );
+        assert!(format!("{err:?}").contains("index_out_of_range") || msg.contains("index"));
+    }
+
+    #[test]
+    fn rejects_index_below_category_min() {
+        let catalog = load_fixture();
+        // Action min index in fixture is 2.
+        let err = compose_from_query(&catalog, "2 1lvl1 2lvl1 1lvl1").unwrap_err();
+        let msg = err.to_string();
+        assert!(
+            msg.contains("Action") && msg.contains("index"),
             "unexpected error: {msg}"
         );
     }

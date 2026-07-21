@@ -22,4 +22,4 @@ Heavy search/lookup/composition runs in the **Tauri Rust** backend (`src-tauri`)
 
 No workbook is bundled. Users upload an `.xlsx`, which is persisted under the app data directory (`prompt_archive.xlsx`) with metadata in Tauri store (`settings.json`).
 
-Automated tests use `fixtures/minimal_prompt_archive.xlsx` (regenerate with `npm run fixture:gen`). E2E sets `PROMPT_COMPOSER_E2E=1` to enable `import_archive_from_path`.
+Automated tests use `fixtures/minimal_prompt_archive.xlsx` (regenerate with `yarn fixture:gen`). E2E sets `PROMPT_COMPOSER_E2E=1` to enable `import_archive_from_path`.

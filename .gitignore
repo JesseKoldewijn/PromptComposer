@@ -3,6 +3,15 @@ node_modules/
 dist/
 src-tauri/target/
 
+# Yarn Berry (keep releases/plugins; ignore cache & install state)
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+
 # Logs & local tooling
 logs/
 *.log

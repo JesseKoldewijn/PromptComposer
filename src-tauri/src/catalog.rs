@@ -8,8 +8,6 @@ use tauri::{AppHandle, Manager};
 use crate::archive_schema::SUBJECT_SHEET_CANDIDATES;
 use crate::error::ComposeError;
 
-pub const MAX_OPERATIONAL_LEVEL: u8 = 5;
-pub const MAX_INDEX: u8 = 30;
 pub const ARCHIVE_FILENAME: &str = "prompt_archive.xlsx";
 pub const STORE_FILENAME: &str = "settings.json";
 pub const STORE_ARCHIVE_KEY: &str = "archive";
@@ -88,6 +86,32 @@ pub struct CatalogCounts {
     pub scenes: usize,
 }
 
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SubjectRange {
+    pub min_row: u32,
+    pub max_row: u32,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CategoryRange {
+    pub min_level: u8,
+    pub max_level: u8,
+    pub min_index: u8,
+    pub max_index: u8,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CatalogRanges {
+    pub subjects: SubjectRange,
+    pub outfits: Option<CategoryRange>,
+    pub poses: Option<CategoryRange>,
+    pub actions: Option<CategoryRange>,
+    pub scenes: Option<CategoryRange>,
+}
+
 impl Catalog {
     pub fn load(path: &Path) -> Result<Self, ComposeError> {
         let mut workbook: Xlsx<_> = calamine::open_workbook(path).map_err(|e| {
@@ -121,12 +145,38 @@ impl Catalog {
         }
     }
 
+    pub fn ranges(&self) -> CatalogRanges {
+        CatalogRanges {
+            subjects: subject_range(&self.subjects),
+            outfits: category_range(&self.outfits),
+            poses: category_range(&self.poses),
+            actions: category_range(&self.actions),
+            scenes: category_range(&self.scenes),
+        }
+    }
+
+    pub fn category_map(&self, category: Category) -> &HashMap<(u8, u8), CategoryEntry> {
+        match category {
+            Category::Outfit => &self.outfits,
+            Category::Pose => &self.poses,
+            Category::Action => &self.actions,
+            Category::Scene => &self.scenes,
+        }
+    }
+
+    pub fn category_range_for(&self, category: Category) -> Option<CategoryRange> {
+        category_range(self.category_map(category))
+    }
+
     pub fn subject(&self, row: u32) -> Result<&Subject, ComposeError> {
         self.subjects.get(&row).ok_or_else(|| {
-            let max = self.subjects.keys().copied().max().unwrap_or(0);
+            let range = subject_range(&self.subjects);
             ComposeError::invalid(
                 "subject_out_of_range",
-                format!("subject row {row} not found (valid Excel rows: 2–{max})"),
+                format!(
+                    "subject row {row} not found (valid Excel rows: {}–{})",
+                    range.min_row, range.max_row
+                ),
             )
         })
     }
@@ -137,23 +187,48 @@ impl Catalog {
         level: u8,
         index: u8,
     ) -> Result<&CategoryEntry, ComposeError> {
-        let map = match category {
-            Category::Outfit => &self.outfits,
-            Category::Pose => &self.poses,
-            Category::Action => &self.actions,
-            Category::Scene => &self.scenes,
-        };
-        map.get(&(level, index)).ok_or_else(|| {
-            ComposeError::invalid(
-                "entry_not_found",
-                format!(
-                    "{} L{level}-{index:02} not found in {}",
-                    category.label(),
-                    category.sheet_name()
-                ),
-            )
-        })
+        self.category_map(category)
+            .get(&(level, index))
+            .ok_or_else(|| {
+                ComposeError::invalid(
+                    "entry_not_found",
+                    format!(
+                        "{} L{level}-{index:02} not found in {}",
+                        category.label(),
+                        category.sheet_name()
+                    ),
+                )
+            })
     }
+}
+
+fn subject_range(subjects: &HashMap<u32, Subject>) -> SubjectRange {
+    SubjectRange {
+        min_row: subjects.keys().copied().min().unwrap_or(2),
+        max_row: subjects.keys().copied().max().unwrap_or(2),
+    }
+}
+
+fn category_range(map: &HashMap<(u8, u8), CategoryEntry>) -> Option<CategoryRange> {
+    if map.is_empty() {
+        return None;
+    }
+    let mut min_level = u8::MAX;
+    let mut max_level = 0u8;
+    let mut min_index = u8::MAX;
+    let mut max_index = 0u8;
+    for &(level, index) in map.keys() {
+        min_level = min_level.min(level);
+        max_level = max_level.max(level);
+        min_index = min_index.min(index);
+        max_index = max_index.max(index);
+    }
+    Some(CategoryRange {
+        min_level,
+        max_level,
+        min_index,
+        max_index,
+    })
 }
 
 pub fn app_data_dir(app: &AppHandle) -> Result<PathBuf, ComposeError> {
@@ -324,6 +399,56 @@ mod tests {
             ACTION_PROMPT
         );
         let _ = fixtures_data::POSE_PROMPT;
+    }
+
+    #[test]
+    fn computes_ranges_from_fixture_keys() {
+        let catalog = Catalog::load(&fixture_path()).unwrap();
+        let ranges = catalog.ranges();
+
+        assert_eq!(
+            ranges.subjects,
+            SubjectRange {
+                min_row: SUBJECT_ROW,
+                max_row: ALT_SUBJECT_ROW,
+            }
+        );
+        assert_eq!(
+            ranges.outfits,
+            Some(CategoryRange {
+                min_level: 1,
+                max_level: 5,
+                min_index: 1,
+                max_index: 30,
+            })
+        );
+        assert_eq!(
+            ranges.poses,
+            Some(CategoryRange {
+                min_level: 1,
+                max_level: 3,
+                min_index: 1,
+                max_index: 5,
+            })
+        );
+        assert_eq!(
+            ranges.actions,
+            Some(CategoryRange {
+                min_level: 1,
+                max_level: 4,
+                min_index: 2,
+                max_index: 10,
+            })
+        );
+        assert_eq!(
+            ranges.scenes,
+            Some(CategoryRange {
+                min_level: 1,
+                max_level: 5,
+                min_index: 1,
+                max_index: 15,
+            })
+        );
     }
 
     #[test]

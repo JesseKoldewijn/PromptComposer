@@ -8,15 +8,15 @@ See [AGENTS.md](./AGENTS.md) — Octane guidance: https://octanejs.dev/llms.txt
 
 ## Requirements
 
-- Node.js 26.3.0 / npm 11.16.0 (Volta + Corepack pins in `package.json`)
+- Node.js 26.3.0 / Yarn 4.17.1 (Volta + Corepack pins in `package.json`)
 - Rust toolchain with Tauri Linux deps (if on Linux/WSL)
 - For e2e on headless Linux/WSL: `xvfb` (`xvfb-run`)
 
 ## Run
 
 ```bash
-npm install
-npm run tauri dev
+yarn install
+yarn tauri dev
 ```
 
 ## Workflow
@@ -34,7 +34,7 @@ Golden query: `2 1lvl1 2lvl1 1lvl2` → `BODY_ALPHA OUTFIT_1_1 POSE_2_1 ACTION_1
 Regenerate fixture:
 
 ```bash
-npm run fixture:gen
+yarn fixture:gen
 ```
 
 ## Query language
@@ -50,12 +50,12 @@ Token order after the row: Outfit → Pose → Action → Scene (optional).
 ## Tests
 
 ```bash
-npm test                 # unit + integration + full e2e (incl. GUI)
-npm run test:ci          # lint + unit + integration + Rust API e2e (CI)
-npm run test:unit        # Rust lib tests + Vitest
-npm run test:integration # Rust archive lifecycle
-npm run test:e2e         # Rust API e2e + GUI WebDriver
-npm run fixture:gen      # Regenerate fixtures/minimal_prompt_archive.xlsx
+yarn test                 # unit + integration + full e2e (incl. GUI)
+yarn test:ci              # lint + unit + integration + Rust API e2e (CI)
+yarn test:unit            # Rust lib tests + Vitest
+yarn test:integration     # Rust archive lifecycle
+yarn test:e2e             # Rust API e2e + GUI WebDriver
+yarn fixture:gen          # Regenerate fixtures/minimal_prompt_archive.xlsx
 ```
 
 ### Fixture
@@ -75,9 +75,9 @@ Alt: `3 5lvl30 1lvl1 4lvl10` → `BODY_BETA OUTFIT_5_30 POSE_1_1 ACTION_4_10`
 
 ### CI & releases
 
-- **Pull requests:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `npm run test:ci` (fmt, clippy, unit, integration, API e2e).
-- **Push to `main`:** [`.github/workflows/release.yml`](.github/workflows/release.yml) re-runs those checks, then builds installers and publishes a GitHub Release.
-  - Tag: `v0.1.<run_number>` on the pushed commit (monotonic so upgrades work).
+- **Pull requests:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `yarn test:ci` (fmt, clippy, unit, integration, API e2e).
+- **Push to `main`:** [`.github/workflows/release.yml`](.github/workflows/release.yml) bumps `package.json` / Tauri / Cargo to `0.1.<run_number>`, commits `chore: release v…` on `main`, then runs checks and publishes a GitHub Release tagged on that commit (so main does not lag the release version). Commits with `[skip release]` in the message skip this workflow.
+  - Tag: `v0.1.<run_number>` on the version-bump commit (monotonic so upgrades work).
   - Artifacts: Linux `.deb` + AppImage, Windows NSIS `-setup.exe`, plus signed updater `.sig` files and `latest.json` (when signing secrets are set).
   - **In-app updates:** on startup the app checks `releases/latest/download/latest.json` and can install a newer **NSIS** or **AppImage** build after confirmation. `.deb` installs still upgrade via the package manager.
   - **Signing secrets (required for updater artifacts):** repo secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (use empty password secret if the key has none). The matching public key is embedded in `src-tauri/tauri.conf.json`. If the private key is lost, already-installed apps cannot verify future updates. Prefer a single-line base64 secret (CI also strips newlines).
@@ -91,4 +91,4 @@ Alt: `3 5lvl30 1lvl1 4lvl10` → `BODY_BETA OUTFIT_5_30 POSE_1_1 ACTION_4_10`
 - Sets `PROMPT_COMPOSER_E2E=1` so `import_archive_from_path` / `e2e_reload_frontend` are allowed.
 - Under E2E, Rust natively navigates to `tauri://localhost` (WebKit otherwise stays on `about:blank`); reloads use `e2e_reload_frontend`.
 - Uses a random `TAURI_WEBDRIVER_PORT` (or the env override) and isolates data under `.e2e-data/` (`XDG_DATA_HOME`).
-- On headless Linux/WSL: `xvfb-run -a npm run test:e2e` if you have no display.
+- On headless Linux/WSL: `xvfb-run -a yarn test:e2e` if you have no display.
