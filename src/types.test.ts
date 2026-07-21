@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { errorMessage, isComposeError } from '../src/types';
+import {
+  errorMessage,
+  formatCategoryRange,
+  formatQueryRangeHint,
+  isComposeError,
+  type CatalogRanges,
+} from '../src/types';
 
 describe('isComposeError', () => {
   it('accepts structured payloads', () => {
@@ -35,5 +41,26 @@ describe('errorMessage', () => {
       message: 'oops',
       suggestion: null,
     });
+  });
+});
+
+describe('formatQueryRangeHint', () => {
+  const ranges: CatalogRanges = {
+    subjects: { minRow: 2, maxRow: 3 },
+    outfits: { minLevel: 1, maxLevel: 5, minIndex: 1, maxIndex: 30 },
+    poses: { minLevel: 1, maxLevel: 3, minIndex: 1, maxIndex: 5 },
+    actions: { minLevel: 1, maxLevel: 4, minIndex: 2, maxIndex: 10 },
+    scenes: { minLevel: 1, maxLevel: 5, minIndex: 1, maxIndex: 15 },
+  };
+
+  it('formats category ranges', () => {
+    expect(formatCategoryRange('Outfit', ranges.outfits)).toBe('Outfit: L1–5 / I1–30');
+    expect(formatCategoryRange('Pose', null)).toBe('Pose: (none)');
+  });
+
+  it('includes subject and category ceilings', () => {
+    expect(formatQueryRangeHint(ranges)).toContain('rows 2–3');
+    expect(formatQueryRangeHint(ranges)).toContain('Outfit: L1–5 / I1–30');
+    expect(formatQueryRangeHint(ranges)).toContain('Scene: L1–5 / I1–15');
   });
 });

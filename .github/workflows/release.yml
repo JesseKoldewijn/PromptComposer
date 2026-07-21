@@ -22,7 +22,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '26.3.0'
-          cache: npm
+          cache: yarn
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -44,11 +44,14 @@ jobs:
             patchelf \
             libssl-dev
 
-      - name: Install npm deps
-        run: npm ci
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --immutable
 
       - name: Lint, unit, integration, API e2e
-        run: npm run test:ci
+        run: yarn test:ci
 
   release:
     name: Build & publish
@@ -71,7 +74,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '26.3.0'
-          cache: npm
+          cache: yarn
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -94,8 +97,11 @@ jobs:
             libssl-dev \
             libfuse2
 
-      - name: Install npm deps
-        run: npm ci
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --immutable
 
       - name: Set release version from run number
         id: ver

@@ -235,10 +235,10 @@ async function invoke(wd, cmd, args = {}) {
 
 async function main() {
   if (!fs.existsSync(appBinary)) {
-    throw new Error(`missing app binary at ${appBinary}; run: npx tauri build --debug --no-bundle`);
+    throw new Error(`missing app binary at ${appBinary}; run: yarn tauri build --debug --no-bundle`);
   }
   if (!fs.existsSync(fixturePath)) {
-    throw new Error(`missing fixture at ${fixturePath}; run: npm run fixture:gen`);
+    throw new Error(`missing fixture at ${fixturePath}; run: yarn fixture:gen`);
   }
 
   fs.rmSync(e2eData, { recursive: true, force: true });

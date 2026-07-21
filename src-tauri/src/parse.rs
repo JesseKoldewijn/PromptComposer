@@ -1,4 +1,4 @@
-use crate::catalog::{Category, MAX_INDEX, MAX_OPERATIONAL_LEVEL};
+use crate::catalog::Category;
 use crate::error::ComposeError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -154,24 +154,16 @@ fn parse_level_index_parts(
 }
 
 fn validate_level_index(level: u8, index: u8, raw: &str) -> Result<(), ComposeError> {
-    if level == 0 || level > 7 {
+    if level == 0 {
         return Err(ComposeError::invalid(
             "level_out_of_range",
-            format!("level in `{raw}` must be 1–5 (got {level})"),
+            format!("level in `{raw}` must be >= 1 (got {level})"),
         ));
     }
-    if level > MAX_OPERATIONAL_LEVEL {
-        return Err(ComposeError::invalid(
-            "level_blocked",
-            format!(
-                "level {level} in `{raw}` is red/black-listed — operational maximum is level {MAX_OPERATIONAL_LEVEL}"
-            ),
-        ));
-    }
-    if index == 0 || index > MAX_INDEX {
+    if index == 0 {
         return Err(ComposeError::invalid(
             "index_out_of_range",
-            format!("index in `{raw}` must be 1–{MAX_INDEX} (got {index})"),
+            format!("index in `{raw}` must be >= 1 (got {index})"),
         ));
     }
     Ok(())
@@ -228,9 +220,16 @@ mod tests {
     }
 
     #[test]
-    fn rejects_level_6() {
-        let err = parse_query("7 6lvl1").unwrap_err();
-        assert!(err.to_string().contains("red/black") || err.to_string().contains("maximum"));
+    fn parses_level_6_structurally() {
+        let q = parse_query("7 6lvl1").unwrap();
+        assert_eq!(q.modules[0].level, 6);
+        assert_eq!(q.modules[0].index, 1);
+    }
+
+    #[test]
+    fn rejects_zero_level_and_index() {
+        assert!(parse_query("7 0lvl1").is_err());
+        assert!(parse_query("7 1lvl0").is_err());
     }
 
     #[test]

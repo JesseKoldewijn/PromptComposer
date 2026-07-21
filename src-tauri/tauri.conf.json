@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
+    "beforeDevCommand": "yarn dev",
+    "beforeBuildCommand": "yarn build"
   },
   "app": {
     "withGlobalTauri": true,
@@ -16,6 +16,8 @@
         "title": "Prompt Composer",
         "width": 960,
         "height": 780,
+        "minWidth": 640,
+        "minHeight": 520,
         "resizable": true,
         "fullscreen": false
       }

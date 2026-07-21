@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'octane';
+import { getVersion } from '@tauri-apps/api/app';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import {
   archiveStatus,
@@ -12,12 +13,13 @@ import type {
   ComposeErrorPayload,
   ComposeResult,
 } from './types';
-import { errorMessage } from './types';
+import { errorMessage, formatQueryRangeHint } from './types';
 import { checkForAppUpdate } from './updater';
 
 export function App() @{
   const [status, setStatus] = useState(null as ArchiveStatus | null);
   const [bootError, setBootError] = useState(null as string | null);
+  const [appVersion, setAppVersion] = useState(null as string | null);
   const [query, setQuery] = useState('');
   const [result, setResult] = useState(null as ComposeResult | null);
   const [error, setError] = useState(null as ComposeErrorPayload | null);
@@ -29,6 +31,9 @@ export function App() @{
     archiveStatus()
       .then((s) => setStatus(s))
       .catch((err) => setBootError(errorMessage(err).message));
+    getVersion()
+      .then((v) => setAppVersion(v))
+      .catch(() => {});
     void checkForAppUpdate();
   }, []);
 
@@ -104,6 +109,7 @@ export function App() @{
 
   const loaded = status?.loaded === true;
   const fileLabel = status?.originalName ?? 'prompt archive';
+  const rangeHint = status?.ranges ? formatQueryRangeHint(status.ranges) : null;
 
   <div class="shell" data-testid="app-shell">
     <header class="topbar">
@@ -111,7 +117,6 @@ export function App() @{
         <h1>
           Prompt <span>Composer</span>
         </h1>
-        <p>Archive composer</p>
       </div>
 
       @if (loaded) {
@@ -202,6 +207,11 @@ export function App() @{
             <code>{'7 1/5 2/3 1/4'}</code>
             {' — row, then Outfit / Pose / Action / optional Scene'}
           </p>
+          @if (rangeHint) {
+            <p class="hint" data-testid="range-hint">
+              {('Archive ranges: ' + rangeHint) as string}
+            </p>
+          }
           <div class="actions">
             <button
               class="btn primary"
@@ -259,5 +269,9 @@ export function App() @{
         }
       </>
     }
+
+    <footer class="app-version" data-testid="app-version">
+      {appVersion ? ('v' + appVersion) as string : ''}
+    </footer>
   </div>
 }

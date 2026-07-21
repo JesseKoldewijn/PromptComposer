@@ -1,59 +1,59 @@
 {
-  "name": "prompt-composer",
-  "private": true,
-  "version": "0.1.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "tauri": "tauri",
-    "fixture:gen": "cargo run --manifest-path src-tauri/Cargo.toml --bin gen_fixture --features gen-fixture",
-    "lint": "cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
-    "test:unit": "cargo test --manifest-path src-tauri/Cargo.toml --lib && vitest run",
-    "test:integration": "cargo test --manifest-path src-tauri/Cargo.toml --test archive_lifecycle",
-    "test:e2e": "cargo test --manifest-path src-tauri/Cargo.toml --test e2e_app_flow && npx tauri build --debug --no-bundle && node e2e/run.mjs",
-    "test:e2e:gui": "npx tauri build --debug --no-bundle && node e2e/run.mjs",
-    "test:ci": "npm run lint && npm run test:unit && npm run test:integration && cargo test --manifest-path src-tauri/Cargo.toml --test e2e_app_flow",
-    "test": "npm run test:unit && npm run test:integration && npm run test:e2e",
-    "tauri:build": "npx tauri build"
-  },
-  "dependencies": {
-    "@fontsource/dm-sans": "^5.2.8",
-    "@fontsource/jetbrains-mono": "^5.2.8",
-    "@octanejs/vite-plugin": "^0.1.10",
-    "@tauri-apps/api": "^2.11.1",
-    "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
-    "@tauri-apps/plugin-dialog": "^2.7.2",
-    "@tauri-apps/plugin-process": "^2.3.1",
-    "@tauri-apps/plugin-store": "^2.4.4",
-    "@tauri-apps/plugin-updater": "^2.10.1",
-    "octane": "^0.1.10"
-  },
-  "devDependencies": {
-    "@tauri-apps/cli": "^2.11.4",
-    "@types/node": "^26.1.1",
-    "@wdio/cli": "^9.29.1",
-    "@wdio/local-runner": "^9.29.1",
-    "@wdio/mocha-framework": "^9.29.1",
-    "@wdio/spec-reporter": "^9.29.1",
-    "@wdio/tauri-service": "^1.2.0",
-    "tsx": "^4.23.1",
-    "typescript": "^7.0.2",
-    "vite": "^8.1.5",
-    "vitest": "^3.2.7",
-    "webdriverio": "^9.27.1"
-  },
-  "packageManager": "npm@11.16.0+sha512.03be172fc3b199c7a06433163e459be5b110a6983c1dd6305b7ac10f6b0fa12e1440755a8df6b1064ab2ccb789df0474919fb9c684e322dc57685ede21752ccb",
-  "volta": {
-    "node": "26.3.0",
-    "npm": "11.16.0"
-  },
-  "engines": {
-    "node": "26.3.0",
-    "npm": "11.16.0"
-  },
-  "overrides": {
-    "@wdio/native-utils": "2.5.0"
-  }
+	"name": "prompt-composer",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"preview": "vite preview",
+		"tauri": "tauri",
+		"fixture:gen": "cargo run --manifest-path src-tauri/Cargo.toml --bin gen_fixture --features gen-fixture",
+		"lint": "cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings",
+		"test:unit": "cargo test --manifest-path src-tauri/Cargo.toml --lib && vitest run",
+		"test:integration": "cargo test --manifest-path src-tauri/Cargo.toml --test archive_lifecycle",
+		"test:e2e": "cargo test --manifest-path src-tauri/Cargo.toml --test e2e_app_flow && yarn tauri build --debug --no-bundle && node e2e/run.mjs",
+		"test:e2e:gui": "yarn tauri build --debug --no-bundle && node e2e/run.mjs",
+		"test:ci": "yarn lint && yarn test:unit && yarn test:integration && cargo test --manifest-path src-tauri/Cargo.toml --test e2e_app_flow",
+		"test": "yarn test:unit && yarn test:integration && yarn test:e2e",
+		"tauri:build": "yarn tauri build"
+	},
+	"dependencies": {
+		"@fontsource/dm-sans": "^5.3.0",
+		"@fontsource/jetbrains-mono": "^5.3.0",
+		"@octanejs/vite-plugin": "^0.1.12",
+		"@tauri-apps/api": "^2.11.1",
+		"@tauri-apps/plugin-clipboard-manager": "^2.3.2",
+		"@tauri-apps/plugin-dialog": "^2.7.2",
+		"@tauri-apps/plugin-process": "^2.3.1",
+		"@tauri-apps/plugin-store": "^2.4.4",
+		"@tauri-apps/plugin-updater": "^2.10.1",
+		"octane": "^0.1.12"
+	},
+	"devDependencies": {
+		"@tauri-apps/cli": "^2.11.4",
+		"@types/node": "^26.1.1",
+		"@wdio/cli": "^9.29.1",
+		"@wdio/local-runner": "^9.29.1",
+		"@wdio/mocha-framework": "^9.29.1",
+		"@wdio/spec-reporter": "^9.29.1",
+		"@wdio/tauri-service": "^1.2.0",
+		"tsx": "^4.23.1",
+		"typescript": "^7.0.2",
+		"vite": "^8.1.5",
+		"vitest": "^4.1.10",
+		"webdriverio": "^9.29.1"
+	},
+	"packageManager": "yarn@4.17.1",
+	"engines": {
+		"node": "26.3.0",
+		"yarn": ">=4"
+	},
+	"resolutions": {
+		"@wdio/native-utils": "2.5.0"
+	},
+	"volta": {
+		"node": "26.3.0",
+		"yarn": "4.17.1"
+	}
 }
