@@ -197,14 +197,27 @@ jobs:
           updaterJsonPreferNsis: true
           args: ${{ matrix.args }}
 
-      # Stable names for ELL-Toolkit Vercel rewrites (releases/latest/download/…).
-      - name: Upload stable toolkit download assets
-        if: matrix.platform == 'windows-latest'
+      # ELL-Toolkit version probe (releases/latest/download/version.json).
+      # Upload from every successful matrix leg so a Windows-only flake cannot omit it.
+      - name: Upload version.json for ELL-Toolkit
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.prepare.outputs.tag }}
           VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "{\"version\":\"${VERSION}\",\"tag\":\"${TAG}\"}" > version.json
+          gh release upload "$TAG" version.json --clobber
+          echo "Uploaded version.json to $TAG"
+
+      # Stable Windows installer name for ELL-Toolkit masked downloads.
+      - name: Upload stable Windows toolkit download asset
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.prepare.outputs.tag }}
         run: |
           set -euo pipefail
           VERSIONED="$(find src-tauri/target/release/bundle/nsis -name '*x64-setup.exe' -type f | head -n1)"
@@ -214,6 +227,5 @@ jobs:
             exit 1
           fi
           cp "$VERSIONED" Prompt.Composer_x64-setup.exe
-          printf '%s\n' "{\"version\":\"${VERSION}\",\"tag\":\"${TAG}\"}" > version.json
-          gh release upload "$TAG" version.json Prompt.Composer_x64-setup.exe --clobber
-          echo "Uploaded version.json and Prompt.Composer_x64-setup.exe to $TAG"
+          gh release upload "$TAG" Prompt.Composer_x64-setup.exe --clobber
+          echo "Uploaded Prompt.Composer_x64-setup.exe to $TAG"

@@ -81,7 +81,7 @@ Alt: `3 5lvl30 1lvl1 4lvl10` → `BODY_BETA OUTFIT_5_30 POSE_1_1 ACTION_4_10`
   - Artifacts: Linux `.deb` + AppImage, Windows NSIS `-setup.exe`, plus signed updater `.sig` files and `latest.json` (when signing secrets are set).
   - **In-app updates:** on startup the app checks `https://ell-toolkit.dulljoker.eu/downloads/prompt-composer/latest.json` (ELL-Toolkit proxies GitHub release assets and rewrites platform download URLs) and can install a newer **NSIS** or **AppImage** build after confirmation. `.deb` installs still upgrade via the package manager.
   - **Signing secrets (required for updater artifacts):** repo secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (use empty password secret if the key has none). The matching public key is embedded in `src-tauri/tauri.conf.json`. If the private key is lost, already-installed apps cannot verify future updates. Prefer a single-line base64 secret (CI also strips newlines).
-  - **Stable download assets:** each Windows release also uploads `version.json` and `Prompt.Composer_x64-setup.exe` for ELL-Toolkit masked downloads (`/downloads/prompt-composer/…`).
+  - **Stable download assets:** each successful release matrix leg uploads `version.json`; the Windows job also uploads `Prompt.Composer_x64-setup.exe` for ELL-Toolkit masked downloads (`/downloads/prompt-composer/…`).
   - **Manual upgrade fallback:** product id is `com.promptcomposer.desktop` (renamed from `com.promptcomposer.app` to avoid the macOS `.app` suffix warning — reinstall once if upgrading from an older id). Re-run a newer NSIS setup or install a newer `.deb`; AppImage: replace the previous file.
 
 ### E2E notes
