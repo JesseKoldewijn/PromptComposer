@@ -17,6 +17,10 @@ export function composeQuery(query: string) {
   return invoke<ComposeResult>('compose_query', { query });
 }
 
+export function randomCompose() {
+  return invoke<ComposeResult>('random_compose');
+}
+
 export function exportArchiveTemplate() {
   return invoke<string>('export_archive_template');
 }

@@ -74,6 +74,7 @@ pub fn run() {
             commands::import_archive_from_path,
             commands::clear_archive,
             commands::compose_query,
+            commands::random_compose,
             commands::export_archive_template,
             commands::e2e_reload_frontend,
         ])

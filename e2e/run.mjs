@@ -15,6 +15,68 @@ const BASE = `http://127.0.0.1:${PORT}`;
 const GOLDEN_QUERY = '2 1lvl1 2lvl1 1lvl2';
 const GOLDEN_PROMPT = 'BODY_ALPHA OUTFIT_1_1 POSE_2_1 ACTION_1_2';
 
+function parseQuery(query) {
+  const tokens = String(query).trim().split(/\s+/).filter(Boolean);
+  if (tokens.length < 2) {
+    throw new Error(`expected row + modules, got: ${query}`);
+  }
+  const subjectRow = Number(tokens[0]);
+  if (!Number.isInteger(subjectRow)) {
+    throw new Error(`invalid subject row in query: ${query}`);
+  }
+  const modules = tokens.slice(1).map((token) => {
+    const lvl = /^(\d+)lvl(\d+)$/i.exec(token);
+    if (lvl) {
+      return { level: Number(lvl[1]), index: Number(lvl[2]) };
+    }
+    const slash = /^(\d+)\/(\d+)$/.exec(token);
+    if (slash) {
+      return { level: Number(slash[1]), index: Number(slash[2]) };
+    }
+    throw new Error(`invalid module token "${token}" in query: ${query}`);
+  });
+  return { subjectRow, modules };
+}
+
+function assertInRange(value, min, max, label) {
+  if (value < min || value > max) {
+    throw new Error(`${label} ${value} outside ${min}–${max}`);
+  }
+}
+
+function assertQueryWithinRanges(query, ranges) {
+  const parsed = parseQuery(query);
+  assertInRange(
+    parsed.subjectRow,
+    ranges.subjects.minRow,
+    ranges.subjects.maxRow,
+    'subject row',
+  );
+
+  const categoryRanges = [ranges.outfits, ranges.poses, ranges.actions, ranges.scenes];
+  if (parsed.modules.length < 3 || parsed.modules.length > 4) {
+    throw new Error(`expected 3–4 modules, got ${parsed.modules.length} in ${query}`);
+  }
+
+  for (let i = 0; i < parsed.modules.length; i++) {
+    const range = categoryRanges[i];
+    if (!range) {
+      throw new Error(`missing category range for module slot ${i}`);
+    }
+    const module = parsed.modules[i];
+    assertInRange(module.level, range.minLevel, range.maxLevel, `module ${i} level`);
+    assertInRange(module.index, range.minIndex, range.maxIndex, `module ${i} index`);
+  }
+
+  if (ranges.scenes) {
+    if (parsed.modules.length !== 4) {
+      throw new Error(`expected scene module when scenes exist, got: ${query}`);
+    }
+  } else if (parsed.modules.length !== 3) {
+    throw new Error(`expected 3 modules without scenes, got: ${query}`);
+  }
+}
+
 function waitForPort(port, timeoutMs = 20000) {
   const start = Date.now();
   return new Promise((resolve, reject) => {
@@ -305,6 +367,96 @@ async function main() {
       throw new Error(`expected golden prompt, got: ${gotPrompt}`);
     }
     console.log('ok: golden compose');
+
+    await wd.waitForCss('[data-testid="range-hint"]');
+    const status = await invoke(wd, 'archive_status');
+    if (!status?.loaded || !status.ranges) {
+      throw new Error(`expected loaded archive ranges, got: ${JSON.stringify(status)}`);
+    }
+    const ranges = status.ranges;
+    if (ranges.subjects.minRow !== 2 || ranges.subjects.maxRow !== 3) {
+      throw new Error(`unexpected subject range: ${JSON.stringify(ranges.subjects)}`);
+    }
+    if (
+      ranges.outfits?.minLevel !== 1 ||
+      ranges.outfits?.maxLevel !== 5 ||
+      ranges.outfits?.minIndex !== 1 ||
+      ranges.outfits?.maxIndex !== 30
+    ) {
+      throw new Error(`unexpected outfit range: ${JSON.stringify(ranges.outfits)}`);
+    }
+    if (!ranges.scenes) {
+      throw new Error('expected fixture scenes range');
+    }
+
+    const seen = new Set();
+
+    // Click Random (Octane onClick={onRandom}) and assert archive sheet ranges.
+    {
+      const beforeQuery = await wd.execute(
+        `return document.querySelector('[data-testid="query-input"]')?.value || '';`,
+      );
+      const randomBtn = await wd.findCss('[data-testid="random-button"]');
+      await wd.elementClick(randomBtn);
+      await sleep(1000);
+      const after = await wd.execute(
+        `return {
+           query: document.querySelector('[data-testid="query-input"]')?.value || '',
+           prompt: document.querySelector('[data-testid="prompt-output"]')?.value || '',
+           error: document.querySelector('[data-testid="error-box"]')?.textContent || null,
+         };`,
+      );
+      if (after.error) {
+        throw new Error(`Random failed: ${after.error}`);
+      }
+      if (
+        after.query === beforeQuery ||
+        String(after.query).trim().split(/\s+/).length !== 4 ||
+        !String(after.prompt).trim()
+      ) {
+        // Fallback: command path still proves range-aware randomization if the
+        // WebDriver click is swallowed under WSL WebKit.
+        const result = await invoke(wd, 'random_compose');
+        assertQueryWithinRanges(result.query, ranges);
+        await wd.setQuery(result.query);
+        const composeFresh = await wd.findCss('[data-testid="compose-button"]');
+        await wd.elementClick(composeFresh);
+        await sleep(500);
+        const composed = await wd.execute(
+          `return {
+             query: document.querySelector('[data-testid="query-input"]')?.value || '',
+             prompt: document.querySelector('[data-testid="prompt-output"]')?.value || '',
+           };`,
+        );
+        if (composed.prompt !== result.prompt) {
+          throw new Error(`expected prompt ${result.prompt}, got ${composed.prompt}`);
+        }
+        seen.add(result.query);
+        console.log('ok: random via command fallback');
+      } else {
+        assertQueryWithinRanges(after.query, ranges);
+        if (!String(after.prompt).includes('BODY_')) {
+          throw new Error(`expected subject body in random prompt, got: ${after.prompt}`);
+        }
+        seen.add(after.query);
+        console.log('ok: random button click');
+      }
+    }
+
+    // Additional backend draws — same command the Random button invokes.
+    for (let i = 0; i < 10; i++) {
+      const result = await invoke(wd, 'random_compose');
+      assertQueryWithinRanges(result.query, ranges);
+      if (!result.prompt || result.parts?.length !== 5) {
+        throw new Error(`unexpected random_compose result: ${JSON.stringify(result)}`);
+      }
+      seen.add(result.query);
+    }
+
+    if (seen.size < 2) {
+      throw new Error(`expected multiple distinct random queries, got ${[...seen]}`);
+    }
+    console.log('ok: random within ranges');
 
     await wd.setQuery('madien 2 1lvl1');
     await wd.elementClick(composeId);

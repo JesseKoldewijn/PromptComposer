@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::catalog::{Catalog, CatalogCounts, CatalogRanges, ARCHIVE_FILENAME};
-use crate::compose::{compose_from_query, ComposeResult};
+use crate::compose::{compose_from_query, random_compose, ComposeResult};
 use crate::error::ComposeError;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -106,6 +106,16 @@ pub fn compose_with_state(state: &AppState, query: &str) -> Result<ComposeResult
         )
     })?;
     compose_from_query(catalog, query)
+}
+
+pub fn random_compose_with_state(state: &AppState) -> Result<ComposeResult, ComposeError> {
+    let catalog = state.catalog.as_ref().ok_or_else(|| {
+        ComposeError::invalid(
+            "no_archive",
+            "no archive loaded — upload an .xlsx prompt archive first",
+        )
+    })?;
+    random_compose(catalog)
 }
 
 pub fn load_state_from_dir(data_dir: &Path) -> Result<AppState, ComposeError> {

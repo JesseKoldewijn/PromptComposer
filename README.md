@@ -23,7 +23,7 @@ yarn tauri dev
 
 1. Launch the app (no spreadsheet is bundled).
 2. **Upload archive** — pick an `.xlsx`, or **Create blank archive** to save a template with the correct sheets and `e.g.` hint rows.
-3. Enter a freeform query and **Compose**.
+3. Enter a freeform query and **Compose**, or click **Random** to sample a valid query within the archive’s sheet ranges.
 4. Use **Replace** / **Clear** in the header chip to change or remove the stored archive.
 
 Deterministic test fixture:
