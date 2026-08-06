@@ -7,6 +7,7 @@ import {
   composeQuery,
   exportArchiveTemplate,
   importArchive,
+  randomCompose,
 } from './api';
 import type {
   ArchiveStatus,
@@ -90,6 +91,22 @@ export function App() @{
     setCopied(false);
     try {
       const next = await composeQuery(query);
+      setResult(next);
+    } catch (err) {
+      setResult(null);
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onRandom() {
+    setBusy(true);
+    setError(null);
+    setCopied(false);
+    try {
+      const next = await randomCompose();
+      setQuery(next.query);
       setResult(next);
     } catch (err) {
       setResult(null);
@@ -223,11 +240,21 @@ export function App() @{
           <div class="actions">
             <button
               class="btn primary"
+              type="button"
               data-testid="compose-button"
               disabled={busy}
-              onClick={() => onCompose()}
+              onClick={onCompose}
             >
               Compose
+            </button>
+            <button
+              class="btn"
+              type="button"
+              data-testid="random-button"
+              disabled={busy}
+              onClick={onRandom}
+            >
+              Random
             </button>
           </div>
         </section>

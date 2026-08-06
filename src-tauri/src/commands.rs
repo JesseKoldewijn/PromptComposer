@@ -8,7 +8,8 @@ use tauri_plugin_store::StoreExt;
 
 use crate::archive::{
     clear_archive_in, compose_with_state, import_archive_into, load_state_from_dir,
-    persist_meta_to_dir, status_from_state, AppState, ArchiveMeta, ArchiveStatus,
+    persist_meta_to_dir, random_compose_with_state, status_from_state, AppState, ArchiveMeta,
+    ArchiveStatus,
 };
 use crate::catalog::{app_data_dir, archive_path, STORE_ARCHIVE_KEY, STORE_FILENAME};
 use crate::compose::ComposeResult;
@@ -38,6 +39,14 @@ pub fn compose_query(
         .lock()
         .map_err(|e| ComposeError::Catalog(e.to_string()))?;
     compose_with_state(&state, &query)
+}
+
+#[tauri::command]
+pub fn random_compose(state: State<'_, Mutex<AppState>>) -> Result<ComposeResult, ComposeError> {
+    let state = state
+        .lock()
+        .map_err(|e| ComposeError::Catalog(e.to_string()))?;
+    random_compose_with_state(&state)
 }
 
 #[tauri::command]
