@@ -42,9 +42,7 @@ pub fn compose_query(
 }
 
 #[tauri::command]
-pub fn random_compose(
-    state: State<'_, Mutex<AppState>>,
-) -> Result<ComposeResult, ComposeError> {
+pub fn random_compose(state: State<'_, Mutex<AppState>>) -> Result<ComposeResult, ComposeError> {
     let state = state
         .lock()
         .map_err(|e| ComposeError::Catalog(e.to_string()))?;

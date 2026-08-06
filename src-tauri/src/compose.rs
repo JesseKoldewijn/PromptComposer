@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use fastrand::Rng;
 use serde::Serialize;
 
-use crate::catalog::{Catalog, Category, CategoryEntry, CategoryRange, CatalogRanges, SubjectRange};
+use crate::catalog::{
+    Catalog, CatalogRanges, Category, CategoryEntry, CategoryRange, SubjectRange,
+};
 use crate::error::ComposeError;
 use crate::parse::{parse_query, ModuleToken, ParsedQuery};
 
