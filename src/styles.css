@@ -63,6 +63,14 @@ textarea {
   border-bottom: 1px solid var(--border);
 }
 
+.topbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .brand {
   display: flex;
   align-items: baseline;
@@ -382,4 +390,95 @@ textarea {
   max-height: 5rem;
   overflow: auto;
   color: var(--text);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8, 9, 10, 0.72);
+}
+
+.modal {
+  width: min(100%, 32rem);
+  max-height: min(90vh, 40rem);
+  overflow: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.modal-head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.guide-steps {
+  margin: 0;
+  padding: 0 0 0 1.15rem;
+  display: grid;
+  gap: 10px;
+}
+
+.guide-steps li {
+  display: grid;
+  gap: 2px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.guide-steps strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.guide-steps code,
+.guide-query code {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+}
+
+.guide-query {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.guide-query p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.guide-code {
+  display: block;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.modal-actions {
+  justify-content: flex-end;
 }

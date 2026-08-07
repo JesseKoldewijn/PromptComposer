@@ -1,51 +1,84 @@
 # Prompt Composer
 
-Desktop prompt composer for XLSX prompt archives. The UI is [Octane](https://octanejs.dev/); all lookup/composition runs in a Tauri Rust backend.
+Desktop prompt composer for XLSX prompt archives. Pick a subject row and outfit / pose / action / scene tokens; the app looks them up in your spreadsheet and composes the final prompt. The UI is [Octane](https://octanejs.dev/); lookup and composition run in a Tauri Rust backend.
 
-## Agent notes
+## Install
+
+Download a build from the [latest GitHub Release](https://github.com/JesseKoldewijn/PromptComposer/releases/latest):
+
+| Platform | Artifact |
+|----------|----------|
+| Windows | `Prompt.Composer_*_x64-setup.exe` (NSIS) |
+| Linux | `.deb` or `.AppImage` (`*_amd64`) |
+
+**Windows:** run the NSIS setup. Updates can also install from inside the app when a newer release is available.
+
+**Linux (.deb):** install with your package manager, for example `sudo apt install ./Prompt.Composer_*_amd64.deb`. Upgrade the same way (or via the package manager); the in-app updater does not replace `.deb` installs.
+
+**Linux (AppImage):** make the file executable and run it (`chmod +x Prompt.Composer_*.AppImage && ./Prompt.Composer_*.AppImage`). Replace the file to upgrade, or use the in-app updater when offered.
+
+No spreadsheet is bundled. On first launch the app shows a short getting-started guide; you can open it again anytime with **Guide** in the header.
+
+## Getting started
+
+1. **Upload an archive** — choose an existing `.xlsx`, or **Create blank archive** to save a template with the required sheets and `e.g.` hint rows.
+2. **Write a query** (or click **Random**) — subject Excel row, then Outfit → Pose → Action → optional Scene.
+3. **Compose** — the composed prompt appears below; use **Copy** to put it on the clipboard.
+4. **Replace** / **Clear** in the header chip when you want a different archive or to remove the stored one.
+
+### Query language
+
+```text
+<excel-row> <level>lvl<index> [<level>lvl<index> ...]
+```
+
+Shorthand `N/M` is the same as `NlvlM` (for example `7 1/5 2/3 1/4` ≡ `7 1lvl5 2lvl3 1lvl4`).
+
+Token order after the row: Outfit → Pose → Action → Scene (optional).
+
+Examples:
+
+- `2 1lvl1 2lvl1 1lvl2` — subject row 2, Outfit L1-01, Pose L2-01, Action L1-02
+- `7 1/5 2/3 1/4 3/1` — same form with slash shorthand, including a scene
+
+### Archive layout
+
+Required sheets: **Subjects** (legacy name **Maidens** still loads), **Outfits**, **Poses**, **Actions**, **Scenes**.
+
+| Sheet | What the composer uses |
+|-------|------------------------|
+| Subjects | Excel row number is the query id (row 2 → query starts with `2`). **Body** is the character prompt. |
+| Outfits / Poses / Actions / Scenes | **Name** must end with `L{level}-{index}` (e.g. `Outfit L1-01` → `1lvl1`). **Status** `USE` marks an active row; **Prompt** is joined into the output. |
+
+A blank template also includes a **HowTo** sheet (ignored by the app). Fill in the `e.g.` hints, save, then **Upload archive**.
+
+---
+
+## Development
+
+### Agent notes
 
 See [AGENTS.md](./AGENTS.md) — Octane guidance: https://octanejs.dev/llms.txt
 
-## Requirements
+### Requirements
 
 - Node.js 26.3.0 / Yarn 4.17.1 (Volta + Corepack pins in `package.json`)
 - Rust toolchain with Tauri Linux deps (if on Linux/WSL)
 - For e2e on headless Linux/WSL: `xvfb` (`xvfb-run`)
 
-## Run
+### Run from source
 
 ```bash
 yarn install
 yarn tauri dev
 ```
 
-## Workflow
-
-1. Launch the app (no spreadsheet is bundled).
-2. **Upload archive** — pick an `.xlsx`, or **Create blank archive** to save a template with the correct sheets and `e.g.` hint rows.
-3. Enter a freeform query and **Compose**, or click **Random** to sample a valid query within the archive’s sheet ranges.
-4. Use **Replace** / **Clear** in the header chip to change or remove the stored archive.
-
-Deterministic test fixture:
-
-`fixtures/minimal_prompt_archive.xlsx`  
+Deterministic test fixture: `fixtures/minimal_prompt_archive.xlsx`  
 Golden query: `2 1lvl1 2lvl1 1lvl2` → `BODY_ALPHA OUTFIT_1_1 POSE_2_1 ACTION_1_2`
-
-Regenerate fixture:
 
 ```bash
 yarn fixture:gen
 ```
-
-## Query language
-
-```text
-<excel-row> <level>lvl<index> [<level>lvl<index> ...]
-```
-
-Shorthand `N/M` is equivalent to `NlvlM` (e.g. `7 1/5 2/3 1/4` ≡ `7 1lvl5 2lvl3 1lvl4`).
-
-Token order after the row: Outfit → Pose → Action → Scene (optional).
 
 ## Tests
 
