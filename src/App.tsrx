@@ -9,6 +9,11 @@ import {
   importArchive,
   randomCompose,
 } from './api';
+import { GettingStartedModal } from './GettingStartedModal.tsrx';
+import {
+  markGettingStartedSeen,
+  shouldAutoShowGettingStarted,
+} from './onboarding';
 import type {
   ArchiveStatus,
   ComposeErrorPayload,
@@ -27,6 +32,7 @@ export function App() @{
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showParts, setShowParts] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     archiveStatus()
@@ -35,8 +41,20 @@ export function App() @{
     getVersion()
       .then((v) => setAppVersion(v))
       .catch(() => {});
+    shouldAutoShowGettingStarted()
+      .then((show) => {
+        if (show) {
+          setShowGuide(true);
+        }
+      })
+      .catch(() => {});
     void checkForAppUpdate();
   }, []);
+
+  async function dismissGuide() {
+    setShowGuide(false);
+    await markGettingStartedSeen();
+  }
 
   async function onImport() {
     setBusy(true);
@@ -136,30 +154,40 @@ export function App() @{
         </h1>
       </div>
 
-      @if (loaded) {
-        <div class="chip" data-testid="archive-chip">
-          <span class="dot" />
-          <strong data-testid="archive-name">{fileLabel as string}</strong>
-          <div class="chip-actions">
-            <button
-              class="btn ghost"
-              data-testid="replace-archive"
-              disabled={busy}
-              onClick={() => onImport()}
-            >
-              Replace
-            </button>
-            <button
-              class="btn ghost danger"
-              data-testid="clear-archive"
-              disabled={busy}
-              onClick={() => onClear()}
-            >
-              Clear
-            </button>
+      <div class="topbar-actions">
+        <button
+          class="btn ghost"
+          type="button"
+          data-testid="open-guide"
+          onClick={() => setShowGuide(true)}
+        >
+          Guide
+        </button>
+        @if (loaded) {
+          <div class="chip" data-testid="archive-chip">
+            <span class="dot" />
+            <strong data-testid="archive-name">{fileLabel as string}</strong>
+            <div class="chip-actions">
+              <button
+                class="btn ghost"
+                data-testid="replace-archive"
+                disabled={busy}
+                onClick={() => onImport()}
+              >
+                Replace
+              </button>
+              <button
+                class="btn ghost danger"
+                data-testid="clear-archive"
+                disabled={busy}
+                onClick={() => onClear()}
+              >
+                Clear
+              </button>
+            </div>
           </div>
-        </div>
-      }
+        }
+      </div>
     </header>
 
     @if (bootError) {
@@ -308,5 +336,7 @@ export function App() @{
     <footer class="app-version" data-testid="app-version">
       {appVersion ? ('v' + appVersion) as string : ''}
     </footer>
+
+    <GettingStartedModal open={showGuide} onClose={() => void dismissGuide()} />
   </div>
 }
